@@ -1,4 +1,119 @@
-# ZSH Aliases Documentation
+# ZSH Dotfiles Configuration
+
+A comprehensive ZSH configuration using [Antidote](https://getantidote.github.io/) plugin manager for an enhanced shell experience. This repository provides a complete setup with modern tools, productivity plugins, and an extensive collection of aliases for efficient command-line workflows.
+
+## Overview
+
+This ZSH configuration includes:
+- **Plugin Management**: Antidote for fast, Git-based plugin management
+- **Enhanced Navigation**: Directory jumping with zoxide, fuzzy finding with fzf
+- **Syntax Highlighting**: Fast syntax highlighting for better readability
+- **Auto-completion**: Enhanced tab completion with fzf integration
+- **Version Management**: mise for managing programming language versions
+- **Prompt**: Starship cross-shell prompt
+- **Extensive Aliases**: 100+ aliases for common development tasks
+
+## Tools and Dependencies
+
+This configuration relies on the following external tools:
+
+### Core Tools
+- **[Homebrew](https://brew.sh/)** - Package manager for macOS
+- **[Antidote](https://getantidote.github.io/)** - ZSH plugin manager
+- **[fzf](https://github.com/junegunn/fzf)** - Fuzzy finder for command-line
+- **[zoxide](https://github.com/ajeetdsouza/zoxide)** - Smart directory jumper
+- **[mise](https://mise.jdx.dev/)** - Multi-language version manager
+- **[Starship](https://starship.rs/)** - Cross-shell prompt
+
+### File and Text Tools
+- **[eza](https://github.com/eza-community/eza)** - Modern replacement for ls
+- **[bat](https://github.com/sharkdp/bat)** - Cat with syntax highlighting
+- **[ripgrep (rg)](https://github.com/BurntSushi/ripgrep)** - Fast text search
+- **[fd](https://github.com/sharkdp/fd)** - Fast find alternative
+- **[jq](https://jqlang.github.io/jq/)** - JSON processor
+
+### Development Tools
+- **[Neovim](https://neovim.io/)** - Text editor (EDITOR)
+- **[VS Code Insiders](https://code.visualstudio.com/insiders/)** - Visual editor (VISUAL)
+- **[Chezmoi](https://www.chezmoi.io/)** - Dotfiles manager
+- **[Overmind](https://github.com/DarthSim/overmind)** - Process manager
+- **[tmux](https://github.com/tmux/tmux)** - Terminal multiplexer
+
+## ZSH Plugins
+
+Plugins are managed via Antidote and configured in `antidote_plugins.conf`:
+
+### Completions
+- **[mattmc3/ez-compinit](https://github.com/mattmc3/ez-compinit)** - Easy completion initialization
+- **[zsh-users/zsh-completions](https://github.com/zsh-users/zsh-completions)** - Additional completions
+- **[aloxaf/fzf-tab](https://github.com/Aloxaf/fzf-tab)** - Fuzzy tab completion
+- **[MichaelAquilina/zsh-you-should-use](https://github.com/MichaelAquilina/zsh-you-should-use)** - Alias reminder
+
+### Core Features
+- **[belak/zsh-utils](https://github.com/belak/zsh-utils)** - Completion styles, editor bindings, history, utility functions
+- **[zshzoo/macos](https://github.com/zshzoo/macos)** - macOS-specific utilities
+- **[romkatv/zsh-bench](https://github.com/romkatv/zsh-bench)** - ZSH benchmarking
+- **[ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh)** - Extract plugin for archive handling
+
+### Fish-like Features
+- **[zdharma-continuum/fast-syntax-highlighting](https://github.com/zdharma-continuum/fast-syntax-highlighting)** - Syntax highlighting
+- **[zsh-users/zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions)** - Command auto-suggestions
+- **[zsh-users/zsh-history-substring-search](https://github.com/zsh-users/zsh-history-substring-search)** - History search with arrow keys
+
+## Repository Structure
+
+```
+zdotdir/
+├── .zprofile              # Environment setup and tool configuration
+├── .zshenv                # Environment variables for all ZSH sessions
+├── .zshrc                 # Interactive shell configuration
+├── .zstyles               # ZSH completion and plugin styles
+├── antidote_plugins.conf  # Antidote plugin definitions
+├── functions/             # Custom ZSH functions
+│   ├── calculate_actions_stats
+│   ├── fetch_action_stats
+│   ├── grecent
+│   ├── is-macos
+│   └── os
+└── rc.d/                  # Modular configuration files
+    ├── 01_history.zsh     # History configuration
+    ├── 02_dirs.zsh        # Directory stack configuration
+    ├── 02_mise.zsh        # mise version manager setup
+    ├── aliases.zsh        # All shell aliases
+    ├── commands.zsh       # Custom shell functions
+    ├── fzf.zsh           # FZF integration
+    ├── history-substring-search.zsh
+    ├── input.zsh         # Input/keybinding configuration
+    ├── sharship.zsh      # Starship prompt setup
+    └── zoixide.zsh       # Zoxide directory jumper setup
+```
+
+### Key Files
+- **`.zprofile`** - Sets up environment variables, tool paths, and initial configuration
+- **`.zshrc`** - Main configuration file that loads plugins and sources rc.d files
+- **`.zstyles`** - ZSH completion styling and antidote configuration
+- **`antidote_plugins.conf`** - Defines all ZSH plugins to be loaded
+- **`functions/`** - Custom shell functions auto-loaded at startup
+- **`rc.d/`** - Modular configuration files for different aspects of the shell
+
+## Installation
+
+1. Install required tools via Homebrew:
+   ```bash
+   brew install antidote fzf zoxide mise starship eza bat ripgrep fd jq neovim
+   ```
+
+2. Clone this repository to your ZSH directory:
+   ```bash
+   git clone https://github.com/andrewmcodes/zdotdir.git ~/.config/zsh
+   ```
+
+3. Set ZDOTDIR in your `~/.zshenv`:
+   ```bash
+   export ZDOTDIR="$HOME/.config/zsh"
+   ```
+
+## Aliases Documentation
 
 This document provides a comprehensive list of all available aliases organized by category.
 

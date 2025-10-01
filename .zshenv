@@ -1,11 +1,12 @@
+
 export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 export XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 export XDG_CACHE_HOME=${XDG_CACHE_HOME:-$HOME/.cache}
 export XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
 
-# Set Homebrew prefix for reuse throughout config
-if command -v brew &>/dev/null; then
-  export HOMEBREW_PREFIX=$(brew --prefix)
+if which brew >/dev/null 2>&1; then
+  HOMEBREW_PREFIX=$(brew --prefix)
+  export HOMEBREW_PREFIX
 fi
 
 # Make Terminal.app behave.

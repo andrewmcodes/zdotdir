@@ -1,0 +1,35 @@
+#!/usr/bin/env zsh
+# bench-startup: Measure interactive shell startup time using `time` and `hyperfine` if available.
+# Usage:
+#   bench-startup          # Quick built-in timing (5 runs)
+#   bench-startup 20       # Specify number of runs
+# Dependencies:
+#   hyperfine (optional) for statistically robust measurements.
+
+set -euo pipefail
+
+runs=${1:-5}
+
+measure_basic() {
+  echo "== Basic (time) measurement ($runs runs) =="
+  for i in $(seq 1 $runs); do
+    /usr/bin/env time -p zsh -i -c exit 2>&1 | awk -v i=$i '/^real/ {print "run " i ": " $2 "s"}'
+  done | tee /tmp/zsh_startup_basic.txt
+  echo "-- summary --"
+  awk '{print $2}' /tmp/zsh_startup_basic.txt | sed 's/s$//' | awk '
+    NR==1 {min=max=$1}
+    {sum+=$1; if($1<min) min=$1; if($1>max) max=$1}
+    END {printf "min=%.3fs avg=%.3fs max=%.3fs (n=%d)\n", min, sum/NR, max, NR}'
+}
+
+measure_hyperfine() {
+  if command -v hyperfine >/dev/null 2>&1; then
+    echo "== Hyperfine measurement =="
+    hyperfine -w 2 -r $runs 'zsh -i -c exit'
+  else
+    echo "hyperfine not found; skipping advanced benchmark" >&2
+  fi
+}
+
+measure_basic
+measure_hyperfine

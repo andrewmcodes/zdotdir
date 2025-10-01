@@ -4,6 +4,19 @@
 #
 
 # Lazy-load (autoload) Zsh function files from a directory.
+
+# Ensure path arrays do not contain duplicates.
+typeset -gU path fpath
+
+# Set the list of directories that zsh searches for commands.
+path=(
+  /opt/{homebrew,local}/{,s}bin(N)
+  $HOME/{,s}bin(N)
+  $HOME/.local/{,s}bin(N)
+  /usr/local/{,s}bin(N)
+  $path
+)
+
 ZFUNCDIR=${ZDOTDIR:-$HOME}/functions
 fpath=($ZFUNCDIR $fpath)
 autoload -Uz $ZFUNCDIR/*(.:t)

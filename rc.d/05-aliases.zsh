@@ -5,6 +5,7 @@ alias "~"="cd ~"
 alias %= \$= #? Define the % symbol as an alias for the $= symbol
 # New
 # Chezmoi
+alias cz="chezmoi"
 alias {cz.apply,chezA}="chezmoi apply"
 alias {cz.diff,chezd}="chezmoi diff"
 alias {cz.edit,cheze}="chezmoi edit"

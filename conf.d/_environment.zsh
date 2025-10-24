@@ -49,6 +49,9 @@ export MANPAGER="less -X"
 
 # FZF
 export FZF_DEFAULT_COMMAND="rg --no-messages --files --no-ignore --hidden --follow --glob '!.git/*'"
+
+# FZF color scheme configuration
+# Define custom color palette for a consistent look
 typeset -a _fzf_colors=(
   fg:#EDEEF0
   bg:#111113
@@ -67,6 +70,7 @@ typeset -a _fzf_colors=(
   query:#EDEEF0
 )
 
+# FZF options for better UX
 typeset -a _fzf_opts=(
   --history="$XDG_DATA_HOME/fzf/history.log"
   --no-separator
@@ -75,7 +79,8 @@ typeset -a _fzf_opts=(
   "--color=${(j:,:)_fzf_colors}"
 )
 
-# Merge with any existing options, preserving order
+# Merge custom options with any existing FZF_DEFAULT_OPTS
+# This preserves user customizations while adding our defaults
 typeset -a _fzf_all=()
 if [[ -n "$FZF_DEFAULT_OPTS" ]]; then
   _fzf_all+=(${(z)FZF_DEFAULT_OPTS})
@@ -83,6 +88,9 @@ fi
 _fzf_all+=("${_fzf_opts[@]}")
 
 export FZF_DEFAULT_OPTS="${(j: :)_fzf_all}"
+
+# Clean up temporary variables
+unset _fzf_colors _fzf_opts _fzf_all
 
 # Zoxide
 export _ZO_DATA_DIR="$XDG_CACHE_HOME/zoxide"

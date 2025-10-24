@@ -29,9 +29,16 @@ export XDG_PROJECTS_DIR=${XDG_PROJECTS_DIR:-$HOME/Projects}
 } __zsh_{config,user_data,cache}_dir XDG_{CONFIG,CACHE,DATA,STATE}_HOME XDG_{RUNTIME,PROJECTS}_DIR
 
 # Set Homebrew prefix if available
-if command -v brew >/dev/null 2>&1; then
-  HOMEBREW_PREFIX=$(brew --prefix)
-  export HOMEBREW_PREFIX
+# Use fast path detection to avoid slow `brew --prefix` call
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  export HOMEBREW_PREFIX=/opt/homebrew
+elif [[ -x /usr/local/bin/brew ]]; then
+  export HOMEBREW_PREFIX=/usr/local
+elif command -v brew >/dev/null 2>&1; then
+  export HOMEBREW_PREFIX=$(brew --prefix)
+fi
+
+if [[ -n "$HOMEBREW_PREFIX" ]]; then
   export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl@1.1"
 fi
 

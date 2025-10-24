@@ -11,11 +11,16 @@ function mkcd() { mkdir -p "$@" && cd "$_"; }
 # Outputs: None
 # Example: pg_start
 function pg_start {
-  local version_to_run=$(mise which postgres | awk -F/ '{print $9}')
+  local version_to_run=$(mise which postgres 2>/dev/null | awk -F/ '{print $9}')
+  if [[ -z "$version_to_run" ]]; then
+    echo "Error: Could not determine postgres version from mise" >&2
+    return 1
+  fi
+  
   local pg_ctl_path="$HOME/.local/share/mise/installs/postgres/$version_to_run/bin/pg_ctl"
   local data_dir="$HOME/.local/share/mise/installs/postgres/$version_to_run/data"
 
-  $pg_ctl_path -D $data_dir start
+  "$pg_ctl_path" -D "$data_dir" start
 }
 
 # Stops the currently running PostgreSQL server.
@@ -28,11 +33,16 @@ function pg_start {
 # Example: pg_stop
 # Note: Ensure that the specified PostgreSQL versions are installed and properly configured in the expected directories.
 function pg_stop {
-  local currently_running_version=$(psql --no-psqlrc -t -c 'show server_version;' postgres | xargs)
+  local currently_running_version=$(psql --no-psqlrc -t -c 'show server_version;' postgres 2>/dev/null | xargs)
+  if [[ -z "$currently_running_version" ]]; then
+    echo "Error: Could not determine running postgres version" >&2
+    return 1
+  fi
+  
   local pg_ctl_path="$HOME/.local/share/mise/installs/postgres/$currently_running_version/bin/pg_ctl"
   local data_dir="$HOME/.local/share/mise/installs/postgres/$currently_running_version/data"
 
-  $pg_ctl_path -D $data_dir stop
+  "$pg_ctl_path" -D "$data_dir" stop
 }
 
 # pg_switch switches the running PostgreSQL server to the specified version.
@@ -47,7 +57,12 @@ function pg_stop {
 # Example: pg_switch 13.3
 function pg_switch {
   local version_to_run=$1
-  local currently_running_version=$(psql --no-psqlrc -t -c 'show server_version;' postgres | xargs)
+  if [[ -z "$version_to_run" ]]; then
+    echo "Usage: pg_switch <version>" >&2
+    return 1
+  fi
+  
+  local currently_running_version=$(psql --no-psqlrc -t -c 'show server_version;' postgres 2>/dev/null | xargs)
 
   if [[ "$version_to_run" = "$currently_running_version" ]]; then
     echo "Postgres $version_to_run is already running."
@@ -63,13 +78,13 @@ function pg_switch {
   local new_data_dir="$HOME/.local/share/mise/installs/postgres/$version_to_run/data"
 
   # Stop the currently running postgres server
-  $current_pg_ctl_path -D $current_data_dir stop
+  "$current_pg_ctl_path" -D "$current_data_dir" stop
 
   # Start the new postgres server
-  $new_pg_ctl_path -D $new_data_dir start
+  "$new_pg_ctl_path" -D "$new_data_dir" start
 
   # Switch the global mise version to ensure `psql` is shimmed to the correct version-directory
-  mise use -g postgres@$version_to_run
+  mise use -g "postgres@$version_to_run"
 }
 
 #* Rails function that will run the rails command in the correct context
@@ -78,7 +93,7 @@ function rails() {
     bin/rails "$@"
   elif [[ -f Gemfile && -f Gemfile.lock ]]; then
     bundle exec rails "$@"
-  elif [[ -n "$(which rails)" ]]; then
+  elif command -v rails >/dev/null 2>&1; then
     command rails "$@"
   else
     echo "Rails not found"
@@ -88,7 +103,7 @@ function rails() {
 # Deletes selected git branches using fzf for interactive selection.
 function delete_git_branches() {
   git branch |
-    grep --invert-match $(git branch --show-current) |
+    grep --invert-match "$(git branch --show-current)" |
     cut -c 3- |
     fzf --multi --preview="git log {} --" |
     xargs git branch --delete --force

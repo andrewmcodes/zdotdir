@@ -2,9 +2,6 @@
 # Environment variables
 #
 
-# History
-export HISTFILE="$XDG_DATA_HOME/zsh/history"
-
 # Ruby
 export GEM_SPEC_CACHE="$XDG_CACHE_HOME/gem"
 export BUNDLE_USER_CACHE="$XDG_CACHE_HOME/bundle"
@@ -45,6 +42,9 @@ export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
 export TLDR_CACHE_DIR="$XDG_CACHE_HOME/tldr"
 export LESSHISTFILE="$XDG_STATE_HOME/less/history"
 export HOMEBREW_NO_ANALYTICS=1
+export EDITOR=nvim
+export VISUAL="code-insiders --wait"
+export PAGER=less
 export MANPAGER="less -X"
 
 # FZF

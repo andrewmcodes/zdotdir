@@ -68,7 +68,7 @@ zdotdir/
 ├── .zshenv                # Environment variables for all ZSH sessions (XDG setup)
 ├── .zshrc                 # Interactive shell configuration (minimal, loads plugins)
 ├── .zstyles               # ZSH completion and plugin styles
-├── .zsh_plugins.txt       # Antidote plugin definitions
+├── antidote_plugins.conf  # Antidote plugin definitions
 ├── completions/           # Custom ZSH completions
 ├── functions/             # Custom ZSH functions (auto-loaded)
 │   ├── calculate_actions_stats
@@ -79,11 +79,11 @@ zdotdir/
 ├── lib/                   # Library files
 │   └── antidote.zsh      # Antidote plugin manager setup
 └── conf.d/                # Modular configuration files (loaded automatically)
-    ├── __init__.zsh      # Initial path and environment setup
+    ├── __init__.zsh      # Initial path setup
+    ├── _environment.zsh  # Environment variable exports (loaded early)
     ├── aliases.zsh       # All shell aliases
     ├── commands.zsh      # Custom shell functions
     ├── directories.zsh   # Named directory shortcuts
-    ├── environment.zsh   # Environment variable exports
     ├── fzf.zsh          # FZF integration
     ├── history-substring-search.zsh # History search keybindings
     ├── history.zsh      # History configuration
@@ -97,9 +97,10 @@ zdotdir/
 - **`.zshenv`** - Sets up XDG directories and ZDOTDIR (loaded for all shells)
 - **`.zshrc`** - Main interactive shell config that loads plugins and functions
 - **`.zstyles`** - ZSH completion styling and plugin configuration
-- **`.zsh_plugins.txt`** - Defines all ZSH plugins loaded by antidote
+- **`antidote_plugins.conf`** - Defines all ZSH plugins loaded by antidote
 - **`lib/antidote.zsh`** - Handles antidote plugin manager initialization
-- **`conf.d/__init__.zsh`** - Runs first, sets up PATH and core environment
+- **`conf.d/__init__.zsh`** - Runs first, sets up PATH
+- **`conf.d/_environment.zsh`** - Runs second, sets environment variables
 - **`conf.d/`** - Modular configuration files, loaded alphabetically after plugins
 - **`functions/`** - Custom shell functions, auto-loaded at startup
 - **`completions/`** - Custom completions directory

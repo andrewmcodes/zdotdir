@@ -14,8 +14,8 @@ This repo is a modular ZSH setup for macOS powered by homebrew, Antidote, fzf, z
   - TMUX: `tmA`, `tmK`, `tmL`; Chezmoi grouped aliases like `{cz.apply,chezA}`.
   - Git: terse + descriptive (`ga`, `gupm`, `gundo`, `gwip`).
 - Add shell functions in `conf.d/commands.zsh` or `functions/*` with ZSH shebang and single responsibility.
-- Prefer fzf-based UX for interactive tasks (see `delete_git_branches`, `install_casks`, `view_defaults` in `06-commands.zsh`).
-- Rails wrapper in `06-commands.zsh` resolves to `bin/rails` → `bundle exec rails` → system `rails`.
+- Prefer fzf-based UX for interactive tasks (see `delete_git_branches`, `install_casks`, `view_defaults` in `commands.zsh`).
+- Rails wrapper in `commands.zsh` resolves to `bin/rails` → `bundle exec rails` → system `rails`.
 - Postgres helpers use `mise` layout: `pg_start`, `pg_stop`, `pg_switch <version>`.
 
 ### Development workflow (what to run)

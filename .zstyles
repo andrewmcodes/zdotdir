@@ -9,7 +9,7 @@
 
 : ${ANTIDOTE_HOME:=${XDG_CACHE_HOME:-~/.cache}/repos}
 
-zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/.zsh_plugins.txt
+zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
 zstyle ':antidote:bundle' use-friendly-names 'yes'
 
 # set list-colors to enable filename colorizing

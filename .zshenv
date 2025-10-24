@@ -17,7 +17,6 @@ fi
 # History
 export HISTFILE="$XDG_DATA_HOME/zsh/history"
 # Ruby
-export GEM_HOME="$XDG_DATA_HOME/gem"
 export GEM_SPEC_CACHE="$XDG_CACHE_HOME/gem"
 export BUNDLE_USER_CACHE="$XDG_CACHE_HOME/bundle"
 export BUNDLE_USER_CONFIG="$XDG_CONFIG_HOME/bundle/config"

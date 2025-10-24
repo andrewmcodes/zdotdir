@@ -56,16 +56,40 @@ export MANPAGER="less -X"
 # FZF
 export FZF_DEFAULT_OPTS='--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4'
 export FZF_DEFAULT_COMMAND="rg --no-messages --files --no-ignore --hidden --follow --glob '!.git/*'"
-export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
-  --history='$XDG_DATA_HOME/fzf/history.log' \
-  --no-separator \
-  --layout=reverse \
-  --inline-info \
-  --color=fg:#edeef0,bg:#111113,hl:#27b08b \
-  --color=fg+:#edeef0,bg+:#212225,hl+:#adf0d4 \
-  --color=info:#3b9eff,prompt:#7d66d9,pointer:#ffd60a \
-  --color=marker:#ec5d5e,spinner:#3b9eff,header:#b0b4ba"
+typeset -a _fzf_colors=(
+  fg:#EDEEF0
+  bg:#111113
+  hl:#696E77
+  fg+:#EDEEF0
+  bg+:#212225
+  hl+:#777B84
+  info:#B0B4BA
+  prompt:#696E77
+  pointer:#696E77
+  marker:#777B84
+  spinner:#B0B4BA
+  header:#B0B4BA
+  border:#43484E
+  label:#B0B4BA
+  query:#EDEEF0
+)
 
+typeset -a _fzf_opts=(
+  --history="$XDG_DATA_HOME/fzf/history.log"
+  --no-separator
+  --layout=reverse
+  --inline-info
+  "--color=${(j:,:)_fzf_colors}"
+)
+
+# Merge with any existing options, preserving order
+typeset -a _fzf_all=()
+if [[ -n "$FZF_DEFAULT_OPTS" ]]; then
+  _fzf_all+=(${(z)FZF_DEFAULT_OPTS})
+fi
+_fzf_all+=("${_fzf_opts[@]}")
+
+export FZF_DEFAULT_OPTS="${(j: :)_fzf_all}"
 # Zoxide
 export _ZO_DATA_DIR="$XDG_CACHE_HOME/zoxide"
 export _ZO_FZF_OPTS="--no-sort --keep-right --height=50% --info=inline --layout=reverse --exit-0 --select-1 --bind=ctrl-z:ignore --preview='\command eza --long --all {2..}' --preview-window=right"

@@ -64,37 +64,45 @@ Plugins are managed via Antidote and configured in `antidote_plugins.conf`:
 
 ```
 zdotdir/
-├── .zprofile              # Environment setup and tool configuration
-├── .zshenv                # Environment variables for all ZSH sessions
-├── .zshrc                 # Interactive shell configuration
+├── .zprofile              # Login shell configuration
+├── .zshenv                # Environment variables for all ZSH sessions (XDG setup)
+├── .zshrc                 # Interactive shell configuration (minimal, loads plugins)
 ├── .zstyles               # ZSH completion and plugin styles
-├── antidote_plugins.conf  # Antidote plugin definitions
-├── functions/             # Custom ZSH functions
+├── .zsh_plugins.txt       # Antidote plugin definitions
+├── completions/           # Custom ZSH completions
+├── functions/             # Custom ZSH functions (auto-loaded)
 │   ├── calculate_actions_stats
 │   ├── fetch_action_stats
 │   ├── grecent
 │   ├── is-macos
 │   └── os
-└── rc.d/                  # Modular configuration files
-    ├── 01_history.zsh     # History configuration
-    ├── 02_dirs.zsh        # Directory stack configuration
-    ├── 02_mise.zsh        # mise version manager setup
-    ├── aliases.zsh        # All shell aliases
-    ├── commands.zsh       # Custom shell functions
-    ├── fzf.zsh           # FZF integration
-    ├── history-substring-search.zsh
-    ├── input.zsh         # Input/keybinding configuration
-    ├── sharship.zsh      # Starship prompt setup
-    └── zoixide.zsh       # Zoxide directory jumper setup
+├── lib/                   # Library files
+│   └── antidote.zsh      # Antidote plugin manager setup
+└── conf.d/                # Modular configuration files (loaded automatically)
+    ├── __init__.zsh      # Initial path and environment setup
+    ├── aliases.zsh       # All shell aliases
+    ├── commands.zsh      # Custom shell functions
+    ├── directories.zsh   # Named directory shortcuts
+    ├── environment.zsh   # Environment variable exports
+    ├── fzf.zsh          # FZF integration
+    ├── history-substring-search.zsh # History search keybindings
+    ├── history.zsh      # History configuration
+    ├── mise.zsh         # mise version manager setup
+    ├── options.zsh      # ZSH options and settings
+    ├── starship.zsh     # Starship prompt setup
+    └── zoxide.zsh       # Zoxide directory jumper setup
 ```
 
 ### Key Files
-- **`.zprofile`** - Sets up environment variables, tool paths, and initial configuration
-- **`.zshrc`** - Main configuration file that loads plugins and sources rc.d files
-- **`.zstyles`** - ZSH completion styling and antidote configuration
-- **`antidote_plugins.conf`** - Defines all ZSH plugins to be loaded
-- **`functions/`** - Custom shell functions auto-loaded at startup
-- **`rc.d/`** - Modular configuration files for different aspects of the shell
+- **`.zshenv`** - Sets up XDG directories and ZDOTDIR (loaded for all shells)
+- **`.zshrc`** - Main interactive shell config that loads plugins and functions
+- **`.zstyles`** - ZSH completion styling and plugin configuration
+- **`.zsh_plugins.txt`** - Defines all ZSH plugins loaded by antidote
+- **`lib/antidote.zsh`** - Handles antidote plugin manager initialization
+- **`conf.d/__init__.zsh`** - Runs first, sets up PATH and core environment
+- **`conf.d/`** - Modular configuration files, loaded alphabetically after plugins
+- **`functions/`** - Custom shell functions, auto-loaded at startup
+- **`completions/`** - Custom completions directory
 
 ## Installation
 

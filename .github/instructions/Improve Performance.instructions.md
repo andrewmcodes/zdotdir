@@ -1,5 +1,5 @@
 ---
-applyTo: '**/rc.d/**'
+applyTo: '**/conf.d/**'
 ---
 
 Fix performance issues in the ZSH configuration files and shell scripts to improve shell startup time and responsiveness.

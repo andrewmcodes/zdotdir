@@ -3,12 +3,12 @@
 #
 setopt EXTENDED_GLOB
 
-HISTFILE=${XDG_DATA_HOME:=~/.local/share}/zsh/history.log
+HISTFILE=${XDG_DATA_HOME:=~/.local/share}/zsh/history
 
 # Just in case: If the parent directory doesn't exist, create it.
 [[ -d $HISTFILE:h ]] || mkdir -p $HISTFILE:h
 SAVEHIST=$((100 * 1000))
-HISTSIZE=$(echo "1.2 * $SAVEHIST" | bc)
+HISTSIZE=$((SAVEHIST * 12 / 10))
 
 setopt appendhistory notify
 unsetopt beep nomatch

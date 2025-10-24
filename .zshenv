@@ -1,99 +1,48 @@
+#!/bin/zsh
+#
+# .zshenv: Zsh environment file, loaded always.
+#
 
+export ZDOTDIR=${ZDOTDIR:-$HOME/.config/zsh}
+
+# XDG
 export XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
-export XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 export XDG_CACHE_HOME=${XDG_CACHE_HOME:-$HOME/.cache}
+export XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 export XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-$HOME/.xdg}
+export XDG_PROJECTS_DIR=${XDG_PROJECTS_DIR:-$HOME/Projects}
 
-if which brew >/dev/null 2>&1; then
-  HOMEBREW_PREFIX=$(brew --prefix)
-  export HOMEBREW_PREFIX
+# Fish-like dirs
+# These variables define ZSH-specific directory paths following Fish shell conventions.
+# They use parameter expansion with default values to set directory locations.
+: ${__zsh_config_dir:=${ZDOTDIR:-${XDG_CONFIG_HOME:-$HOME/.config}/zsh}}
+: ${__zsh_user_data_dir:=${XDG_DATA_HOME:-$HOME/.local/share}/zsh}
+: ${__zsh_cache_dir:=${XDG_CACHE_HOME:-$HOME/.cache}/zsh}
+
+# Ensure Zsh directories exist.
+() {
+  local zdir
+  for zdir in $@; do
+    [[ -d "${(P)zdir}" ]] || mkdir -p -- "${(P)zdir}"
+  done
+} __zsh_{config,user_data,cache}_dir XDG_{CONFIG,CACHE,DATA,STATE}_HOME XDG_{RUNTIME,PROJECTS}_DIR
+
+# Set Homebrew prefix if available
+# Use fast path detection to avoid slow `brew --prefix` call
+if [[ -x /opt/homebrew/bin/brew ]]; then
+  export HOMEBREW_PREFIX=/opt/homebrew
+elif [[ -x /usr/local/bin/brew ]]; then
+  export HOMEBREW_PREFIX=/usr/local
+elif command -v brew >/dev/null 2>&1; then
+  export HOMEBREW_PREFIX=$(brew --prefix)
+fi
+
+if [[ -n "$HOMEBREW_PREFIX" ]]; then
   export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl@1.1"
 fi
 
+# Make Terminal.app behave.
 if [[ "$OSTYPE" == darwin* ]]; then
   export SHELL_SESSIONS_DISABLE=1
 fi
-
-# History
-export HISTFILE="$XDG_DATA_HOME/zsh/history"
-# Ruby
-export GEM_SPEC_CACHE="$XDG_CACHE_HOME/gem"
-export BUNDLE_USER_CACHE="$XDG_CACHE_HOME/bundle"
-export BUNDLE_USER_CONFIG="$XDG_CONFIG_HOME/bundle/config"
-export BUNDLE_USER_PLUGIN="$XDG_DATA_HOME/bundle"
-export DISABLE_SPRING=true
-export RUBY_DEBUG_HISTORY_FILE="$XDG_DATA_HOME/ruby/debug_history.log"
-export RUBY_DEBUG_IRB_CONSOLE=1
-[[ -f $HOME/.gemrc.local ]] && export GEMRC=$HOME/.gemrc.local
-# GNUPG
-export GNUPGHOME="$XDG_CONFIG_HOME/gnupg"
-# Go Lang
-export GOPATH="$XDG_DATA_HOME/go"
-# Node
-export NODE_OPTIONS="--disable-warning=ExperimentalWarning"
-export NODE_REPL_HISTORY="$XDG_STATE_HOME/node_repl_history"
-export NPM_CONFIG_CACHE="$XDG_CACHE_HOME/npm"
-export NPM_CONFIG_TMP="${XDG_RUNTIME_DIR:-/tmp}/npm"
-export NPM_CONFIG_USERCONFIG="$XDG_CONFIG_HOME/npm/npmrc"
-export PNPM_HOME="$XDG_CACHE_HOME/pnpm"
-export YARN_CACHE_FOLDER="$XDG_CACHE_HOME/yarn"
-export YARN_ENABLE_TELEMETRY=0
-# PostgreSQL
-export PSQL_HISTORY="$XDG_STATE_HOME/psql/history"
-# Rust
-export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
-export CARGO_HOME="$XDG_DATA_HOME/cargo"
-# Docker
-export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
-# CLI Tools
-export TLDR_CACHE_DIR="$XDG_CACHE_HOME/tldr"
-export LESSHISTFILE="$XDG_STATE_HOME/less/history"
-export HOMEBREW_NO_ANALYTICS=1
-# Shell
-export VISUAL="code-insiders --wait"
-export EDITOR="nvim"
-export MANPAGER="less -X"
-# FZF
-export FZF_DEFAULT_OPTS='--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4'
-export FZF_DEFAULT_COMMAND="rg --no-messages --files --no-ignore --hidden --follow --glob '!.git/*'"
-typeset -a _fzf_colors=(
-  fg:#EDEEF0
-  bg:#111113
-  hl:#696E77
-  fg+:#EDEEF0
-  bg+:#212225
-  hl+:#777B84
-  info:#B0B4BA
-  prompt:#696E77
-  pointer:#696E77
-  marker:#777B84
-  spinner:#B0B4BA
-  header:#B0B4BA
-  border:#43484E
-  label:#B0B4BA
-  query:#EDEEF0
-)
-
-typeset -a _fzf_opts=(
-  --history="$XDG_DATA_HOME/fzf/history.log"
-  --no-separator
-  --layout=reverse
-  --inline-info
-  "--color=${(j:,:)_fzf_colors}"
-)
-
-# Merge with any existing options, preserving order
-typeset -a _fzf_all=()
-if [[ -n "$FZF_DEFAULT_OPTS" ]]; then
-  _fzf_all+=(${(z)FZF_DEFAULT_OPTS})
-fi
-_fzf_all+=("${_fzf_opts[@]}")
-
-export FZF_DEFAULT_OPTS="${(j: :)_fzf_all}"
-# Zoxide
-export _ZO_DATA_DIR="$XDG_CACHE_HOME/zoxide"
-export _ZO_FZF_OPTS="--no-sort --keep-right --height=50% --info=inline --layout=reverse --exit-0 --select-1 --bind=ctrl-z:ignore --preview='\command eza --long --all {2..}' --preview-window=right"
-
-# Plugins
-export ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets cursor root line)
-export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e4e4e"

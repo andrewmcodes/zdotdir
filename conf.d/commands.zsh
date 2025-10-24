@@ -49,7 +49,7 @@ function pg_switch {
   local version_to_run=$1
   local currently_running_version=$(psql --no-psqlrc -t -c 'show server_version;' postgres | xargs)
 
-  if [ "$version_to_run" = "$currently_running_version" ]; then
+  if [[ "$version_to_run" = "$currently_running_version" ]]; then
     echo "Postgres $version_to_run is already running."
     return 1
   fi

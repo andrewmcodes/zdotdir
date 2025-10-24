@@ -93,4 +93,6 @@ export ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets cursor root line)
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e4e4e"
 
 # PKG_CONFIG_PATH
-export PKG_CONFIG_PATH="/opt/homebrew/bin/pkg-config:$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix curl)/lib/pkgconfig:$(brew --prefix zlib)/lib/pkgconfig"
+if [[ -n "$HOMEBREW_PREFIX" ]]; then
+  export PKG_CONFIG_PATH="${HOMEBREW_PREFIX}/bin/pkg-config:${HOMEBREW_PREFIX}/opt/icu4c/lib/pkgconfig:${HOMEBREW_PREFIX}/opt/curl/lib/pkgconfig:${HOMEBREW_PREFIX}/opt/zlib/lib/pkgconfig"
+fi

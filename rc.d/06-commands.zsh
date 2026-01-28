@@ -73,17 +73,17 @@ function pg_switch {
 }
 
 #* Rails function that will run the rails command in the correct context
-function rails() {
-  if [[ -f bin/rails ]]; then
-    bin/rails "$@"
-  elif [[ -f Gemfile && -f Gemfile.lock ]]; then
-    bundle exec rails "$@"
-  elif [[ -n "$(which rails)" ]]; then
-    command rails "$@"
-  else
-    echo "Rails not found"
-  fi
-}
+# function rails() {
+#   if [[ -f bin/rails ]]; then
+#     bin/rails "$@"
+#   elif [[ -f Gemfile && -f Gemfile.lock ]]; then
+#     bundle exec rails "$@"
+#   elif [[ -n "$(which rails)" ]]; then
+#     command rails "$@"
+#   else
+#     echo "Rails not found"
+#   fi
+# }
 
 # Deletes selected git branches using fzf for interactive selection.
 function delete_git_branches() {

@@ -113,6 +113,34 @@ zdotdir/
    export ZDOTDIR="$HOME/.config/zsh"
    ```
 
+## Testing
+
+This repository includes a comprehensive test suite to verify that the configuration is properly structured and that important tools are correctly integrated.
+
+### Running Tests
+
+Run all tests:
+```bash
+./tests/run_tests.sh
+```
+
+Run specific test files:
+```bash
+./tests/run_tests.sh "test_core_tools.sh"
+```
+
+### Test Coverage
+
+The test suite includes:
+
+- **Core Tools Integration**: Tests for mise, fzf, and zoxide configuration
+- **Configuration Files**: Tests for .zshrc, .zshenv, .zprofile structure
+- **Custom Functions**: Tests for autoloaded functions in the `functions/` directory
+- **Aliases**: Tests for alias definitions
+- **Custom Commands**: Tests for shell functions in rc.d/06-commands.zsh
+
+For more details, see [tests/README.md](tests/README.md).
+
 ## Aliases Documentation
 
 This document provides a comprehensive list of all available aliases organized by category.

@@ -31,6 +31,7 @@ antidote load
 export PKG_CONFIG_PATH="/opt/homebrew/bin/pkg-config:$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix curl)/lib/pkgconfig:$(brew --prefix zlib)/lib/pkgconfig"
 
 eval "$(mise activate zsh)"
+eval "$(fnox activate zsh)"
 
 # Source anything in rc.d.
 for _rc in ${ZDOTDIR:-$HOME}/rc.d/*.zsh; do

@@ -7,11 +7,12 @@ export XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
 if which brew >/dev/null 2>&1; then
   HOMEBREW_PREFIX=$(brew --prefix)
   export HOMEBREW_PREFIX
-  export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl@1.1"
+  export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl"
 fi
 
 if [[ "$OSTYPE" == darwin* ]]; then
   export SHELL_SESSIONS_DISABLE=1
+  export SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
 fi
 
 # History
@@ -49,6 +50,7 @@ export DOCKER_CONFIG="$XDG_CONFIG_HOME/docker"
 export TLDR_CACHE_DIR="$XDG_CACHE_HOME/tldr"
 export LESSHISTFILE="$XDG_STATE_HOME/less/history"
 export HOMEBREW_NO_ANALYTICS=1
+export DISABLE_TELEMETRY=1
 # Shell
 export VISUAL="code-insiders --wait"
 export EDITOR="nvim"
@@ -97,3 +99,8 @@ export _ZO_FZF_OPTS="--no-sort --keep-right --height=50% --info=inline --layout=
 # Plugins
 export ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets cursor root line)
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e4e4e"
+# FNOX
+export FNOX_AGE_KEY=$(cat ~/.config/fnox/age.txt | grep "AGE-SECRET-KEY")
+# Obsidian
+export OBSIDIAN_VAULT_PATH="$HOME/git/andrewmcodes/digital-brain"
+export OBSIDIAN_VAULT_NAME="digital-brain"

@@ -24,11 +24,19 @@ autoload -Uz $ZFUNCDIR/*(.:t)
 # Set any zstyles you might use for configuration.
 [[ ! -f ${ZDOTDIR:-$HOME}/.zstyles ]] || source ${ZDOTDIR:-$HOME}/.zstyles
 
-# Create an amazing Zsh config using antidote plugins.
-source ${HOMEBREW_PREFIX:-$(brew --prefix)}/opt/antidote/share/antidote/antidote.zsh
-antidote load
+# Antidote: source the lib (cheap, keeps the `antidote` command available), then
+# source the static plugin file directly — skipping `antidote load`'s per-startup
+# freshness machinery (~27ms). Regenerate only when the .conf is newer.
+source ${HOMEBREW_PREFIX}/opt/antidote/share/antidote/antidote.zsh
+zsh_plugins=${ZDOTDIR:-$HOME}/antidote_plugins
+if [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.conf ]]; then
+  antidote bundle <${zsh_plugins}.conf >|${zsh_plugins}.zsh
+fi
+source ${zsh_plugins}.zsh
+unset zsh_plugins
 
-export PKG_CONFIG_PATH="/opt/homebrew/bin/pkg-config:$(brew --prefix icu4c)/lib/pkgconfig:$(brew --prefix curl)/lib/pkgconfig:$(brew --prefix zlib)/lib/pkgconfig"
+#* Hardcoded opt paths instead of `$(brew --prefix <formula>)` — avoids 3 brew forks per startup.
+export PKG_CONFIG_PATH="${HOMEBREW_PREFIX}/bin/pkg-config:${HOMEBREW_PREFIX}/opt/icu4c/lib/pkgconfig:${HOMEBREW_PREFIX}/opt/curl/lib/pkgconfig:${HOMEBREW_PREFIX}/opt/zlib/lib/pkgconfig"
 
 eval "$(mise activate zsh)"
 eval "$(fnox activate zsh)"

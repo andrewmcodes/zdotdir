@@ -4,13 +4,10 @@ export XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
 export XDG_CACHE_HOME=${XDG_CACHE_HOME:-$HOME/.cache}
 export XDG_STATE_HOME=${XDG_STATE_HOME:-$HOME/.local/state}
 
-if which brew >/dev/null 2>&1; then
-  HOMEBREW_PREFIX=$(brew --prefix)
-  export HOMEBREW_PREFIX
-  export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl"
-fi
-
 if [[ "$OSTYPE" == darwin* ]]; then
+  #* Hardcoded instead of `$(brew --prefix)` — stable on Apple Silicon, saves a fork in every shell.
+  export HOMEBREW_PREFIX=/opt/homebrew
+  export RUBY_CONFIGURE_OPTS="--with-openssl-dir=$HOMEBREW_PREFIX/opt/openssl"
   export SHELL_SESSIONS_DISABLE=1
   export SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
 fi

@@ -13,6 +13,10 @@ zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
 # Store clones as owner/repo (e.g. ~/.cache/repos/zsh-users/zsh-autosuggestions).
 zstyle ':antidote:bundle' path-style 'short'
 
+# Completions: cache + zcompile the zcompdump (skips insecure-dir checks; ~daily refresh).
+#* After adding new completions, clear the cached dump so they're picked up.
+zstyle ':plugin:ez-compinit' 'use-cache' 'yes'
+
 # set list-colors to enable filename colorizing
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always $realpath'

@@ -96,6 +96,9 @@ export _ZO_FZF_OPTS="--no-sort --keep-right --height=50% --info=inline --layout=
 # Plugins
 export ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets cursor root line)
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e4e4e"
+#* Skip re-binding widgets on every precmd (perf win); don't suggest on large pastes.
+export ZSH_AUTOSUGGEST_MANUAL_REBIND=1
+export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 # FNOX
 export FNOX_AGE_KEY=$(cat ~/.config/fnox/age.txt | grep "AGE-SECRET-KEY")
 # Obsidian

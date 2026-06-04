@@ -3,15 +3,15 @@
 This repo is a modular ZSH setup for macOS powered by Homebrew, Antidote, fzf, zoxide, mise, and starship, with conventions codified across `rc.d/*` and `functions/*`.
 
 ### Architecture and load order
-**Boot sequence** (critical for understanding where to add code):
-1. `.zprofile` - Login shells (PATH setup, environment variables)
-2. `.zshenv` - All shell types (minimal, fast-loading vars only)
+**Boot sequence** (critical for understanding where to add code; Zsh sources these in this fixed order):
+1. `.zshenv` - All shell types, sourced first (XDG base dirs, exported env vars, tool cache/config redirection, `FNOX_AGE_KEY`). Keep minimal and fast — no subprocess-heavy work.
+2. `.zprofile` - Login shells only (OrbStack init, Obsidian PATH)
 3. `.zshrc` - Interactive shells (main config, loads everything else):
    - Sets up `path` and `fpath` arrays
    - Autoloads all functions from `functions/` directory
    - Sources `.zstyles` for antidote/completion configuration
    - Runs `antidote load` to source plugins from `antidote_plugins.conf`
-   - Activates `mise` version manager
+   - Activates `mise` (version manager) and `fnox` (age-encrypted secrets)
    - Sources all `rc.d/*.zsh` files alphabetically
 
 **Plugin loading**: Antidote reads `antidote_plugins.conf` and generates static plugin code. Plugins use annotations like `kind:fpath`, `kind:defer`, `path:`, `conditional:is-macos`.
@@ -131,10 +131,12 @@ if command -v gls >/dev/null 2>&1; then
 
 ### External dependencies
 
-**Required tools** (installed via Homebrew):
+**Required tools** (mostly installed via Homebrew):
 - **Core**: antidote, fzf, zoxide, mise, starship
 - **File tools**: eza, bat, ripgrep, fd, jq
 - **Dev tools**: tmux, overmind, chezmoi, neovim, vscode-insiders
+- **Shell history**: atuin (loaded as an antidote plugin; needs the `atuin` binary)
+- **Secrets**: fnox (installed via `mise`; age-encrypted; `fnox activate zsh` runs in `.zshrc`, key from `FNOX_AGE_KEY`)
 
 **Version management**: `mise` handles Ruby, Node, Python, Postgres, etc. Activated in `.zshrc` with `eval "$(mise activate zsh)"`.
 

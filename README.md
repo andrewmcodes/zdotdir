@@ -38,6 +38,7 @@ This configuration relies on the following external tools:
 - **[Chezmoi](https://www.chezmoi.io/)** - Dotfiles manager
 - **[Overmind](https://github.com/DarthSim/overmind)** - Process manager
 - **[tmux](https://github.com/tmux/tmux)** - Terminal multiplexer
+- **[fnox](https://fnox.jdx.dev)** - age-encrypted secrets/env manager, installed via `mise` (activated in `.zshrc`; key sourced into `FNOX_AGE_KEY`)
 
 ## ZSH Plugins
 
@@ -60,15 +61,21 @@ Plugins are managed via Antidote and configured in `antidote_plugins.conf`:
 - **[zsh-users/zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions)** - Command auto-suggestions
 - **[zsh-users/zsh-history-substring-search](https://github.com/zsh-users/zsh-history-substring-search)** - History search with arrow keys
 
+### Shell History
+- **[atuinsh/atuin](https://github.com/atuinsh/atuin)** - SQLite-backed, searchable shell history (requires the `atuin` binary)
+
 ## Repository Structure
 
 ```
 zdotdir/
-├── .zprofile              # Environment setup and tool configuration
-├── .zshenv                # Environment variables for all ZSH sessions
+├── .zshenv                # Environment variables for all ZSH sessions (sourced first)
+├── .zprofile              # Login-shell setup (OrbStack init, Obsidian PATH)
 ├── .zshrc                 # Interactive shell configuration
 ├── .zstyles               # ZSH completion and plugin styles
-├── antidote_plugins.conf  # Antidote plugin definitions
+├── antidote_plugins.conf  # Antidote plugin definitions (edit this)
+├── antidote_plugins.zsh   # Generated static load file (do not edit by hand)
+├── docs/
+│   └── antidote.md        # Antidote usage and annotation reference
 ├── functions/             # Custom ZSH functions (auto-loaded, one per file)
 │   ├── bench-startup
 │   ├── calculate_actions_stats
@@ -90,10 +97,11 @@ zdotdir/
 ```
 
 ### Key Files
-- **`.zprofile`** - Sets up environment variables, tool paths, and initial configuration
+- **`.zshenv`** - Environment variables and XDG base dirs; sourced for every shell, before `.zprofile` and `.zshrc`
+- **`.zprofile`** - Login-shell setup only (OrbStack init, Obsidian PATH)
 - **`.zshrc`** - Main configuration file that loads plugins and sources rc.d files
 - **`.zstyles`** - ZSH completion styling and antidote configuration
-- **`antidote_plugins.conf`** - Defines all ZSH plugins to be loaded
+- **`antidote_plugins.conf`** - Defines all ZSH plugins to be loaded (the file you edit; `antidote_plugins.zsh` is generated)
 - **`functions/`** - Custom shell functions auto-loaded at startup
 - **`rc.d/`** - Modular configuration files for different aspects of the shell
 
@@ -101,7 +109,7 @@ zdotdir/
 
 1. Install required tools via Homebrew:
    ```bash
-   brew install antidote fzf zoxide mise starship eza bat ripgrep fd jq neovim
+   brew install antidote fzf zoxide mise starship eza bat ripgrep fd jq neovim atuin
    ```
 
 2. Clone this repository to your ZSH directory:

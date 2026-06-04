@@ -69,23 +69,24 @@ zdotdir/
 ├── .zshrc                 # Interactive shell configuration
 ├── .zstyles               # ZSH completion and plugin styles
 ├── antidote_plugins.conf  # Antidote plugin definitions
-├── functions/             # Custom ZSH functions
+├── functions/             # Custom ZSH functions (auto-loaded, one per file)
+│   ├── bench-startup
 │   ├── calculate_actions_stats
 │   ├── fetch_action_stats
+│   ├── funcs              # Lists your own commands (run `funcs`)
 │   ├── grecent
 │   ├── is-macos
 │   └── os
 └── rc.d/                  # Modular configuration files
-    ├── 01_history.zsh     # History configuration
+    ├── 01-hist.zsh        # History configuration
     ├── 02_dirs.zsh        # Directory stack configuration
-    ├── 02_mise.zsh        # mise version manager setup
-    ├── aliases.zsh        # All shell aliases
-    ├── commands.zsh       # Custom shell functions
-    ├── fzf.zsh           # FZF integration
+    ├── 04-opts.zsh        # Shell options
+    ├── 05-aliases.zsh     # All shell aliases
+    ├── 06-commands.zsh    # Custom shell functions
+    ├── fzf.zsh            # FZF integration
     ├── history-substring-search.zsh
-    ├── input.zsh         # Input/keybinding configuration
-    ├── sharship.zsh      # Starship prompt setup
-    └── zoixide.zsh       # Zoxide directory jumper setup
+    ├── sharship.zsh       # Starship prompt setup
+    └── zoixide.zsh        # Zoxide directory jumper setup
 ```
 
 ### Key Files
@@ -112,6 +113,35 @@ zdotdir/
    ```bash
    export ZDOTDIR="$HOME/.config/zsh"
    ```
+
+## Functions Documentation
+
+Custom shell functions live in two places: one file per function in `functions/`
+(auto-loaded at startup) and inline definitions in `rc.d/06-commands.zsh`.
+
+Run **`funcs`** to discover them at any time — it lists only your own commands
+(with descriptions pulled from each function's leading comment) and hides private
+helpers and plugin/zsh-internal functions. `funcs <pattern>` filters by name, and
+`funcs | fzf` emits bare names for scripting. Because it reads the files directly,
+any function you add shows up automatically as long as it has a leading comment.
+
+| Function | Description |
+|----------|-------------|
+| `funcs` | List your own shell commands with descriptions (this command) |
+| `bench-startup` | Measure interactive shell startup time using `time` and `hyperfine` if available |
+| `os` | Start the Overmind process manager with the appropriate Procfile |
+| `grecent` | Interactively check out a recent git branch via fzf |
+| `is-macos` | Return success when running on macOS |
+| `fetch_action_stats` | Fetch GitHub Actions run durations for a workflow |
+| `calculate_actions_stats` | Compute avg/median from piped `fetch_action_stats` output |
+| `mkcd` | Create a directory and `cd` into it |
+| `pg_start` | Start the PostgreSQL server installed by mise |
+| `pg_stop` | Stop the currently running PostgreSQL server |
+| `pg_switch` | Switch the running PostgreSQL server to a given version |
+| `delete_git_branches` | Interactively delete git branches via fzf |
+| `install_casks` | Interactively install Homebrew casks via fzf |
+| `print_path` | Pretty-print `$PATH`, one entry per line |
+| `view_defaults` | Browse and export macOS `defaults` domains via fzf |
 
 ## Aliases Documentation
 

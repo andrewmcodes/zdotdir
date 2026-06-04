@@ -1,0 +1,129 @@
+#!/bin/zsh
+# funcs: List your own shell commands with a one-line description, hiding private
+#        helpers and plugin/zsh-internal functions you're not meant to call.
+#
+# Usage:
+#   funcs            # grouped, described listing (when output is a terminal)
+#   funcs pg         # only entries whose name matches *pg*
+#   funcs | fzf      # bare names, one per line, when piped (handy for scripts)
+#
+# What counts as "yours":
+#   - every file in $ZFUNCDIR  (zsh autoloads one function per file), and
+#   - every `function name`/`name()` defined in $ZDOTDIR/rc.d/*.zsh
+#   Nested helpers (e.g. an inner `main`) and plugin/tool functions never live in
+#   those files, so they're excluded for free. Names starting with `_` are skipped.
+
+emulate -L zsh
+setopt local_options extended_glob no_nomatch
+
+local zdotdir=${ZDOTDIR:-$HOME}
+local zfuncdir=${ZFUNCDIR:-$zdotdir/functions}
+local filter=${1:-}
+
+typeset -A desc cat
+typeset -a names
+local f rc name line clean d
+local -i seen prevcomment
+local block
+
+# --- 1. Autoloaded functions: one file == one public function ----------------
+for f in $zfuncdir/*(.N); do
+  name=${f:t}
+  [[ $name == _* ]] && continue
+  [[ -n $filter && $name != *$filter* ]] && continue
+  names+=$name
+  cat[$name]='functions/'
+  # The description is the first meaningful comment line in the file.
+  d=''
+  seen=0
+  while IFS= read -r line; do
+    (( ++seen > 10 )) && break
+    [[ $line == '#!'* ]] && continue              # shebang
+    [[ -z ${line//[[:space:]]/} ]] && continue    # blank line
+    if [[ $line == \#* ]]; then                   # first real line is a comment
+      clean=${line##\#}
+      clean=${clean##[[:space:]]#[*?!-]#[[:space:]]#}
+      clean=${clean%%[[:space:]]#}
+      clean=${clean#${name}: }
+      clean=${clean#${name}:}
+      d=$clean
+    fi
+    break                                          # stop at the first non-shebang line
+  done < $f
+  desc[$name]=$d
+done
+
+# --- 2. Functions defined inline in rc.d/*.zsh -------------------------------
+for rc in $zdotdir/rc.d/*.zsh(.N); do
+  block=''
+  prevcomment=0
+  while IFS= read -r line; do
+    if [[ $line == [[:space:]]#\#* ]]; then        # comment line
+      clean=${line##[[:space:]]#\#}
+      clean=${clean##[[:space:]]#[*?!-]#[[:space:]]#}
+      clean=${clean%%[[:space:]]#}
+      (( prevcomment )) || block=''                # a new comment block begins
+      [[ -z $block && -n $clean ]] && block=$clean # keep the block's first real line
+      prevcomment=1
+      continue
+    fi
+    name=''
+    if [[ $line =~ '^[[:space:]]*function[[:space:]]+([A-Za-z_][A-Za-z0-9_.:-]*)' ]]; then
+      name=$match[1]
+    elif [[ $line =~ '^[[:space:]]*([A-Za-z_][A-Za-z0-9_.:-]*)[[:space:]]*\(\)' ]]; then
+      name=$match[1]
+    fi
+    if [[ -n $name && $name != _* && -z ${cat[$name]} ]]; then
+      if [[ -z $filter || $name == *$filter* ]]; then
+        names+=$name
+        cat[$name]="rc.d/${rc:t}"
+        desc[$name]=$block
+      fi
+    fi
+    block=''
+    prevcomment=0
+  done < $rc
+done
+
+# --- 3. Output ---------------------------------------------------------------
+if (( ${#names} == 0 )); then
+  print -u2 -- "funcs: nothing matches '${filter}'"
+  return 1
+fi
+
+# Piped/non-interactive: bare names, sorted — composes with fzf, grep, xargs, ...
+if [[ ! -t 1 ]]; then
+  print -l -- ${(o)names}
+  return 0
+fi
+
+local c_head=$'\e[1m' c_name=$'\e[36m' c_dim=$'\e[2m' c_rst=$'\e[0m'
+
+# Column width for aligned names.
+local -i w=0
+for name in $names; do (( ${#name} > w )) && w=${#name}; done
+
+# Group order: autoloaded functions first, then each rc.d file alphabetically.
+typeset -a cats ordered c
+for name in $names; do cats+=${cat[$name]}; done
+cats=(${(u)cats})
+for c in functions/ ${(o)cats}; do
+  [[ -n ${(M)ordered:#$c} ]] && continue
+  [[ -n ${(M)cats:#$c} ]] && ordered+=$c
+done
+
+for c in $ordered; do
+  print -r -- "${c_head}${c}${c_rst}"
+  for name in ${(o)names}; do
+    [[ ${cat[$name]} == $c ]] || continue
+    if [[ -n ${desc[$name]} ]]; then
+      printf "  %s%-*s%s  %s%s%s\n" "$c_name" $w "$name" "$c_rst" "$c_dim" "${desc[$name]}" "$c_rst"
+    else
+      printf "  %s%-*s%s\n" "$c_name" $w "$name" "$c_rst"
+    fi
+  done
+  print
+done
+
+printf "%s%d commands · 'funcs <pattern>' to filter · 'which <name>' to inspect%s\n" \
+  "$c_dim" ${#names} "$c_rst"

@@ -39,6 +39,7 @@ This configuration relies on the following external tools:
 - **[Overmind](https://github.com/DarthSim/overmind)** - Process manager
 - **[tmux](https://github.com/tmux/tmux)** - Terminal multiplexer
 - **[fnox](https://fnox.jdx.dev)** - age-encrypted secrets/env manager, installed via `mise` (activated in `.zshrc`; key sourced into `FNOX_AGE_KEY`)
+- **[zunit](https://zunit.xyz)** - ZSH unit testing framework, used by `mise run test` (install via `brew install zunit-zsh/zunit/zunit`)
 
 ## ZSH Plugins
 
@@ -121,6 +122,21 @@ zdotdir/
    ```bash
    export ZDOTDIR="$HOME/.config/zsh"
    ```
+
+## Testing
+
+Unit tests are written with [zunit](https://zunit.xyz) and run through a [mise](https://mise.jdx.dev/) task.
+
+1. Install zunit (and its `revolver` dependency):
+   ```bash
+   brew install zunit-zsh/zunit/zunit
+   ```
+2. Run the suite from the repo root:
+   ```bash
+   mise run test   # or: mise run t
+   ```
+
+Tests live in `tests/*.zunit` with configuration in `.zunit.yml`; `tests/_support/bootstrap` autoloads the functions under test. The suite focuses on the functions with real logic (`funcs`, `calculate_actions_stats`) — interactive and side-effecting commands are intentionally not covered.
 
 ## Functions Documentation
 

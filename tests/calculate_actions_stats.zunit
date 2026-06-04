@@ -1,0 +1,25 @@
+#!/usr/bin/env zunit
+
+@test 'computes avg and median for an odd-length sorted series' {
+  run calculate_actions_stats <<< $'1\n2\n3\n4\n5'
+
+  assert $state equals 0
+  assert "${lines[1]}" same_as 'avg=3.0'
+  assert "${lines[2]}" same_as 'median=3.0'
+}
+
+@test 'computes avg and median for an even-length sorted series' {
+  run calculate_actions_stats <<< $'2\n4\n6\n8'
+
+  assert $state equals 0
+  assert "${lines[1]}" same_as 'avg=5.0'
+  assert "${lines[2]}" same_as 'median=5.0'
+}
+
+@test 'rounds avg and median to one decimal place' {
+  run calculate_actions_stats <<< $'1\n2'
+
+  assert $state equals 0
+  assert "${lines[1]}" same_as 'avg=1.5'
+  assert "${lines[2]}" same_as 'median=1.5'
+}

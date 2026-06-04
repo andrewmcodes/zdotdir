@@ -1,0 +1,32 @@
+#!/usr/bin/env zunit
+
+# `funcs` is exercised against a fixture ZDOTDIR so its output is stable and
+# independent of the real config. When stdout is not a TTY (as under zunit),
+# funcs prints bare command names, one per line, sorted.
+
+@test 'lists autoloaded and rc.d commands, hiding _private ones' {
+  local fixture="${ZUNIT_SUPPORT_DIR}/funcs-fixture"
+  ZDOTDIR="$fixture" ZFUNCDIR="$fixture/functions" run funcs
+
+  assert $state equals 0
+  assert "${#lines}" equals 3
+  assert "${lines[1]}" same_as 'alpha'
+  assert "${lines[2]}" same_as 'beta'
+  assert "${lines[3]}" same_as 'gamma'
+}
+
+@test 'filters results by name pattern' {
+  local fixture="${ZUNIT_SUPPORT_DIR}/funcs-fixture"
+  ZDOTDIR="$fixture" ZFUNCDIR="$fixture/functions" run funcs alph
+
+  assert $state equals 0
+  assert "$output" same_as 'alpha'
+}
+
+@test 'returns non-zero and a message when nothing matches' {
+  local fixture="${ZUNIT_SUPPORT_DIR}/funcs-fixture"
+  ZDOTDIR="$fixture" ZFUNCDIR="$fixture/functions" run funcs nope
+
+  assert $state equals 1
+  assert "$output" contains 'nothing matches'
+}

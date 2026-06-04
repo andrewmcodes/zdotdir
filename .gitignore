@@ -2,3 +2,7 @@
 .antidote
 .zsh_history
 antidote_plugins.zsh
+
+# zunit test output + revolver (spinner) runtime state
+tests/_output/
+.revolver/

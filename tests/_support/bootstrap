@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+#
+# zunit bootstrap — sourced once before the test run.
+# Makes the repo's autoloaded functions available to every test.
+#
+
+# Resolve paths from this file's own location (tests/_support/bootstrap).
+typeset -g ZUNIT_SUPPORT_DIR="${${(%):-%x}:A:h}"
+typeset -g ZUNIT_PROJECT_ROOT="${ZUNIT_SUPPORT_DIR:h:h}"
+
+# Autoload the functions under test from the real functions/ directory.
+fpath=("$ZUNIT_PROJECT_ROOT/functions" $fpath)
+autoload -Uz calculate_actions_stats funcs

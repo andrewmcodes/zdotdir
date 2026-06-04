@@ -2,7 +2,7 @@
 
 This file provides guidance to coding agents (Claude Code, etc.) when working with code in this repository.
 
-This is a personal `$ZDOTDIR` — a modular Zsh config for macOS, lives at `~/.config/zsh`, and is driven by Homebrew, Antidote, fzf, zoxide, mise, fnox, and starship. There is no build or test suite; "running" the code means starting a shell.
+This is a personal `$ZDOTDIR` — a modular Zsh config for macOS, lives at `~/.config/zsh`, and is driven by Homebrew, Antidote, fzf, zoxide, mise, fnox, and starship. There is no build step; "running" the code means starting a shell. A small zunit unit suite covers the few functions with real logic — run it with `mise run test`.
 
 ## Boot sequence (where code runs, in order)
 
@@ -65,6 +65,21 @@ zsh-bench         # romkatv/zsh-bench, on PATH via the plugin
 # profile what's slow on startup:
 zmodload zsh/zprof; source ~/.zshrc; zprof
 ```
+
+## Tests
+
+Unit tests use [zunit](https://zunit.xyz) and are run through a mise task:
+
+```zsh
+mise run test     # run the suite (alias: mise run t)
+zunit run         # run zunit directly
+```
+
+- **Prerequisite**: `brew install zunit-zsh/zunit/zunit` (pulls in its `revolver` dependency). zunit is *not* managed by mise — only the task runner is.
+- Tests live in `tests/*.zunit` (zsh, BATS-style `@test` blocks; each file needs the `#!/usr/bin/env zunit` shebang). Config is `.zunit.yml`.
+- `tests/_support/bootstrap` is auto-sourced once before the run; it autoloads the functions under test from `functions/` and exports `ZUNIT_SUPPORT_DIR`/`ZUNIT_PROJECT_ROOT`.
+- Only functions with real logic are tested (`funcs`, `calculate_actions_stats`); interactive/side-effecting commands (fzf wrappers, `pg_*`, anything hitting `gh`/`brew`) are intentionally skipped.
+- Gotchas worth knowing when adding tests: under zunit stdout is not a TTY, so `funcs` emits bare names; `assert ... same_as` only compares single lines, so assert multi-line output element-by-element via the `$lines` array; drive a function's stdin with a here-string on the `run` line (`run my_fn <<< $'…'`); point logic at fixtures by setting env (e.g. `ZDOTDIR`/`ZFUNCDIR`) as a prefix on the `run` call.
 
 ## External dependencies
 

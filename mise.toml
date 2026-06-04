@@ -1,0 +1,8 @@
+# mise tasks for this zsh config. Run with `mise run <task>` (or `mise <task>`).
+# zunit + its revolver dependency are installed via Homebrew:
+#   brew install zunit-zsh/zunit/zunit
+
+[tasks.test]
+description = "Run the zunit unit test suite"
+alias = "t"
+run = "zunit run"

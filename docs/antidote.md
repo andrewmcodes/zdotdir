@@ -1,372 +1,465 @@
-Antidote is a Zsh plugin manager made from the ground up thinking about performance.
+Antidote is a Zsh plugin manager built from the ground up with performance in mind. This config uses [antidote](https://antidote.sh) **2.1.0**, installed via Homebrew.
 
 The antidote developer regularly publishes zsh-bench results in his [dotfiles repo](https://github.com/mattmc3/zdotdir).
 
+## How this config uses antidote
+
+The moving parts in this `$ZDOTDIR`:
+
+| File | Role |
+| --- | --- |
+| `antidote_plugins.conf` | The plugins file (one bundle per line). This is the file you edit. |
+| `antidote_plugins.zsh` | The generated static load file. **Do not edit by hand** — `antidote load` regenerates it whenever the `.conf` is newer. |
+| `.zstyles` | Sets the antidote zstyles (plugins file location, path style, etc.). |
+| `.zshrc` | Sources antidote and calls `antidote load`. |
+
+The static file name is derived from the plugins file name by swapping the extension, so `antidote_plugins.conf` always produces `antidote_plugins.zsh`.
+
 ## .zshrc
 
-After installation, the recommended way to use antidote is to call the `antidote load` command from your `.zshrc`:
+The recommended way to use antidote is to source it and call `antidote load`. This config does exactly that in `.zshrc`:
 
-```
-# now, simply add these two lines in your ~/.zshrc
+```zsh
+# .zshrc
 
-# source antidote
-source $(brew --prefix)/opt/antidote/share/antidote/antidote.zsh
+# Source any zstyles first so antidote sees them (path style, plugins file, …).
+[[ ! -f ${ZDOTDIR:-$HOME}/.zstyles ]] || source ${ZDOTDIR:-$HOME}/.zstyles
 
-# initialize plugins statically with ${ZDOTDIR:-~}/antidote_plugins.conf
+# Source antidote (Homebrew install) and load plugins.
+source ${HOMEBREW_PREFIX:-$(brew --prefix)}/opt/antidote/share/antidote/antidote.zsh
 antidote load
 ```
 
+`antidote load` turns the plugins file into a static load file and sources it. It only regenerates the static file when the plugins file is newer, so the cost on a normal startup is negligible.
+
+## .zstyles
+
+antidote reads its configuration from zstyles. This config sets the following in `.zstyles` (which must be sourced **before** `antidote load`):
+
+```zsh
+# Clone bundles under ~/.cache/repos instead of the default cache dir.
+: ${ANTIDOTE_HOME:=${XDG_CACHE_HOME:-~/.cache}/repos}
+
+# Use antidote_plugins.conf as the plugins file (overrides the default .zsh_plugins.txt).
+zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
+
+# Store clones as owner/repo instead of the escaped antibody-style path.
+zstyle ':antidote:bundle' use-friendly-names 'yes'
+```
+
+> `use-friendly-names 'yes'` is a legacy alias for `path-style short` (see [Path style](#path-style)).
+
 ## Ultra high performance install
 
-If you want to squeeze every last drop of performance out of your antidote config, you can do all the things `antidote load` does for you on your own. If you’re fairly comfortable with zsh, this is a more robust `.zshrc` snippet you can use:
+If you want to squeeze every last drop of performance out of antidote, you can do everything `antidote load` does on your own. If you're comfortable with zsh, this is a more robust `.zshrc` snippet:
 
-```
+```zsh
 # ${ZDOTDIR:-~}/.zshrc
 
-# Set the root name of the plugins files (.txt and .zsh) antidote will use.
-zsh_plugins=${ZDOTDIR:-~}/.zsh_plugins
+# Root name of the plugins files (.conf and .zsh) antidote will use.
+zsh_plugins=${ZDOTDIR:-~}/antidote_plugins
 
-# Ensure the antidote_plugins.conf file exists so you can add plugins.
-[[ -f ${zsh_plugins}.txt ]] || touch ${zsh_plugins}.txt
+# Ensure the plugins file exists so you can add plugins.
+[[ -f ${zsh_plugins}.conf ]] || touch ${zsh_plugins}.conf
 
 # Lazy-load antidote from its functions directory.
-fpath=(/path/to/antidote/functions $fpath)
+fpath=(${HOMEBREW_PREFIX:-$(brew --prefix)}/opt/antidote/share/antidote/functions $fpath)
 autoload -Uz antidote
 
-# Generate a new static file whenever antidote_plugins.conf is updated.
-if [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.txt ]]; then
-  antidote bundle <${zsh_plugins}.txt >|${zsh_plugins}.zsh
+# Regenerate the static file only when the plugins file changes.
+if [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.conf ]]; then
+  antidote bundle <${zsh_plugins}.conf >|${zsh_plugins}.zsh
 fi
 
-# Source your static plugins file.
+# Source the static plugins file.
 source ${zsh_plugins}.zsh
 ```
 
-This method boils down to the bare essentials and will run `antidote bundle` only if absolutely necessary. However, note that you’ll really only be saving small fractions of a second over calling the much simpler `antidote load` command directly.
+This boils down to the bare essentials and runs `antidote bundle` only when absolutely necessary. Note you'll really only save small fractions of a second over the much simpler `antidote load`.
 
 ## Usage
 
-Antidote achieves its speed by doing all the work of cloning plugins up front and generating the code your `.zshrc` needs to source those plugins. Typically, we want to do this via a plugins file.
+Antidote achieves its speed by doing all the work of cloning plugins up front and generating the code your `.zshrc` needs to source those plugins. Typically we do this via a plugins file.
 
 ## Plugins file
 
-A plugins file is basically any text file that has one plugin per line.
+A plugins file is any text file with one plugin per line. This config's `antidote_plugins.conf` looks like this:
 
-In our examples, let’s assume we have a `~/.antidote_plugins.conf` file with these contents:
+```text
+# antidote_plugins.conf - comments begin with "#"
 
-```
-# .antidote_plugins.conf - comments begin with "#"
-
-# Basic Zsh plugins are defined in user/repo format
-jeffreytse/zsh-vi-mode
-
-# Bash plugins may also work
-rupa/z
-
-# empty lines are skipped
-
-# annotations are also allowed:
-romkatv/zsh-bench kind:path
-olets/zsh-abbr    kind:defer
-
-# set up Zsh completions with plugins
+# Completions
 mattmc3/ez-compinit
 zsh-users/zsh-completions kind:fpath path:src
+aloxaf/fzf-tab
+MichaelAquilina/zsh-you-should-use
 
-# frameworks like oh-my-zsh are supported
-getantidote/use-omz        # handle OMZ dependencies
-ohmyzsh/ohmyzsh path:lib   # load OMZ's library
-ohmyzsh/ohmyzsh path:plugins/colored-man-pages  # load OMZ plugins
-ohmyzsh/ohmyzsh path:plugins/magic-enter
+# Completion styles — autoload the functions, then run setup afterward
+belak/zsh-utils path:completion/functions kind:autoload post:compstyle_zshzoo_setup
 
-# or lighter-weight ones like Zephyr
-mattmc3/zephyr path:plugins/editor
-mattmc3/zephyr path:plugins/history
-mattmc3/zephyr path:plugins/prompt
-mattmc3/zephyr path:plugins/utility
+# Keybindings / History / Utilities
+belak/zsh-utils path:editor
+belak/zsh-utils path:history
+belak/zsh-utils path:utility
 
-# prompts:
-#   with prompt plugins, remember to add this to your .zshrc:
-#   \`autoload -Uz promptinit && promptinit && prompt pure\`
-sindresorhus/pure     kind:fpath
-romkatv/powerlevel10k kind:fpath
+# Load only on macOS
+zshzoo/macos conditional:is-macos
 
-# popular fish-like plugins
-mattmc3/zfunctions
+# Put a tool on $PATH rather than sourcing it
+romkatv/zsh-bench kind:path
+
+# Pull a single plugin out of a framework
+ohmyzsh/ohmyzsh path:plugins/extract
+
+# Fish-like features
+zdharma-continuum/fast-syntax-highlighting kind:defer  # defer slow syntax highlighting
 zsh-users/zsh-autosuggestions
-zdharma-continuum/fast-syntax-highlighting kind:defer
 zsh-users/zsh-history-substring-search
+atuinsh/atuin
 ```
 
-Now that we have a plugins file, let’s look how can we load them!
+Things to notice:
 
-If you followed the recommended install procedure, your plugins will already be loaded when you called `antidote load` in your `.zshrc`.
+- **Basic bundles** are `owner/repo`. Bash plugins generally work too.
+- **Empty lines and `#` comments are skipped.**
+- **Annotations** (`kind:`, `path:`, `conditional:`, `post:`, …) tune how each bundle is treated — see below.
 
-However, you could choose generate your static plugins file manually with `antidote bundle`. Basically, antidote will only need to run when you change your`antidote_plugins.conf` file. After you change this, use antidote to regenerate the static file.
+If you followed the recommended install, your plugins are already loaded once `antidote load` runs in `.zshrc`.
 
-Assuming the `antidote_plugins.conf` be created above, we can run:
+To regenerate the static file manually you can run `antidote bundle` yourself. It only needs to run when you change the plugins file:
 
+```zsh
+# generate antidote_plugins.zsh
+antidote bundle <antidote_plugins.conf >|"$ZDOTDIR/antidote_plugins.zsh"
 ```
-# generate ~/.zsh_plugins.zsh
-antidote bundle <~/antidote_plugins.conf >"$ZDOTDIR/.zsh_plugins.zsh"
-```
 
-We can run this at any time to update our static `.zsh_plugins.zsh` file, however if you followed the recommended install procedure you won’t need to do this yourself.
+Then source the generated file in your `.zshrc`:
 
-Finally, the static generated plugins file gets sourced in your `.zshrc`.
-
-```
+```zsh
 # .zshrc
-source "$ZDOTDIR/.zsh_plugins.zsh"
+source "$ZDOTDIR/antidote_plugins.zsh"
 ```
 
-_Note that to use `antidote bundle` this way, we will never want to call `antidote init`. **Be sure that’s not in your $ZDOTDIR/.zshrc**. `antidote init` is a wrapper provided for backwards compatibility for users familiar with antibody and antigen, but is no longer recommended._
+> To use `antidote bundle` this way, do **not** call `antidote init`. `antidote init` is a wrapper kept for backwards compatibility with antibody/antigen (dynamic mode) and is not recommended for new setups.
 
-You may also change Antidote’s home folder, for example:
+You can change antidote's home folder (where bundles are cloned). This config sets it to `~/.cache/repos`:
 
+```zsh
+export ANTIDOTE_HOME=~/.cache/repos
 ```
-export ANTIDOTE_HOME=~/.cache/antidote
-```
 
-## Options
+## Annotations
 
-There are a few options you can use that should cover most common use cases. Let’s take a look!
+A few annotations cover most use cases. They're appended after the bundle, e.g. `owner/repo kind:defer path:plugins/foo`.
 
 ## Kind
 
-The `kind` annotation can be used to determine how a bundle should be treated.
+The `kind` annotation determines how a bundle is treated. Supported values: `zsh` (default), `path`, `fpath`, `defer`, `clone`, `autoload`.
 
 ### kind:zsh
 
-The default is `kind:zsh`, which will look for files that match these globs:
+The default. antidote looks for files matching these globs and `source`s them:
 
 - `*.plugin.zsh`
 - `*.zsh`
 - `*.sh`
 - `*.zsh-theme`
 
-And `source` them.
-
 Example:
 
-```
-$ antidote bundle zsh-users/zsh-autosuggestions kind:zsh
-fpath+=( /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions )
-source /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions/zsh-autosuggestions.plugin.zsh
+```text
+$ antidote bundle zsh-users/zsh-autosuggestions
+fpath+=( "$HOME/.cache/repos/zsh-users/zsh-autosuggestions" )
+source "$HOME/.cache/repos/zsh-users/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh"
 ```
 
 ### kind:path
 
-The `kind:path` mode will just put the plugin folder in your `$PATH`.
+`kind:path` just puts the plugin folder on your `$PATH`.
 
-Example:
-
-```
+```text
 $ antidote bundle romkatv/zsh-bench kind:path
-export PATH="/Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-romkatv-SLASH-zsh-bench:$PATH"
+export PATH="$HOME/.cache/repos/romkatv/zsh-bench:$PATH"
 ```
 
 ### kind:fpath
 
-The `kind:fpath` only puts the plugin folder on the fpath, doing nothing else. It can be especially useful for completion scripts that aren’t intended to be sourced directly, or for prompts that support `promptinit`.
+`kind:fpath` only puts the plugin folder on the `fpath`, doing nothing else. Useful for completion scripts that aren't meant to be sourced directly, or for prompts that support `promptinit`.
 
-Example:
-
+```text
+$ antidote bundle zsh-users/zsh-completions kind:fpath path:src
+fpath+=( "$HOME/.cache/repos/zsh-users/zsh-completions/src" )
 ```
-$ antidote bundle sindresorhus/pure kind:fpath
-fpath+=( /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-sindresorhus-SLASH-pure )
+
+### kind:autoload
+
+`kind:autoload` adds the folder to `fpath` and `autoload`s every function file in it, but does not source anything. Useful for collections of autoloadable functions. Often paired with `post:` to run a setup function once the functions are available — as this config does for `belak/zsh-utils` completion styles:
+
+```text
+$ antidote bundle belak/zsh-utils path:completion/functions kind:autoload post:compstyle_zshzoo_setup
+fpath+=( "$HOME/.cache/repos/belak/zsh-utils/completion/functions" )
+builtin autoload -Uz $fpath[-1]/*(N.:t)
+compstyle_zshzoo_setup
 ```
 
 ### kind:clone
 
-The `kind:clone` only gets the plugin, doing nothing else. It can be useful for managing a package that isn’t directly used as a shell plugin.
+`kind:clone` only clones the plugin, doing nothing else. Useful for managing a package that isn't used directly as a shell plugin.
 
-Example:
-
-```
+```text
 $ antidote bundle mbadolato/iTerm2-Color-Schemes kind:clone
 ```
 
 ### kind:defer
 
-The `kind:defer` option defers loading of a plugin. This can be useful for plugins you don’t need available right away or are slow to load. [Use with caution](https://github.com/romkatv/zsh-bench#deferred-initialization).
+`kind:defer` defers loading of a plugin (via [romkatv/zsh-defer](https://github.com/romkatv/zsh-defer)). Useful for plugins you don't need right away or that are slow to load. [Use with caution.](https://github.com/romkatv/zsh-bench#deferred-initialization)
 
-Example:
-
-```
-$ antidote bundle olets/zsh-abbr kind:defer
+```text
+$ antidote bundle zdharma-continuum/fast-syntax-highlighting kind:defer
 if ! (( $+functions[zsh-defer] )); then
-  fpath+=( /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-romkatv-SLASH-zsh-defer )
-  source /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-romkatv-SLASH-zsh-defer/zsh-defer.plugin.zsh
+  fpath+=( "$HOME/.cache/repos/romkatv/zsh-defer" )
+  source "$HOME/.cache/repos/romkatv/zsh-defer/zsh-defer.plugin.zsh"
 fi
-fpath+=( /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-olets-SLASH-zsh-abbr )
-zsh-defer source /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-olets-SLASH-zsh-abbr/zsh-abbr.plugin.zsh
+fpath+=( "$HOME/.cache/repos/zdharma-continuum/fast-syntax-highlighting" )
+zsh-defer source "$HOME/.cache/repos/zdharma-continuum/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
 ```
 
 ## Branch
 
-You can also specify a branch to download, if you don’t want the `main` branch for whatever reason.
+Specify a branch to download if you don't want the default branch:
 
-Example:
-
-```
+```text
 $ antidote bundle zsh-users/zsh-autosuggestions branch:develop
-fpath+=( /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions )
-source /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions/zsh-autosuggestions.plugin.zsh
+fpath+=( "$HOME/.cache/repos/zsh-users/zsh-autosuggestions" )
+source "$HOME/.cache/repos/zsh-users/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh"
 ```
 
 ## Path
 
-You may specify a subfolder or a specific file if the repo you are bundling contains multiple plugins. This is especially useful for frameworks like [Oh-My-Zsh](https://github.com/ohmyzsh/ohmyzsh).
+Specify a subfolder or a specific file if the repo contains multiple plugins. This is especially useful for frameworks like [Oh-My-Zsh](https://github.com/ohmyzsh/ohmyzsh).
 
-File Example:
+File example:
 
-```
+```text
 $ antidote bundle ohmyzsh/ohmyzsh path:lib/clipboard.zsh
-source /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-ohmyzsh-SLASH-ohmyzsh/lib/clipboard.zsh
+source "$HOME/.cache/repos/ohmyzsh/ohmyzsh/lib/clipboard.zsh"
 ```
 
-Folder Example:
+Folder example:
 
-```
-$ antidote bundle ohmyzsh/ohmyzsh path:plugins/magic-enter
-fpath+=( /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-ohmyzsh-SLASH-ohmyzsh/plugins/magic-enter )
-source /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-ohmyzsh-SLASH-ohmyzsh/plugins/magic-enter/magic-enter.plugin.zsh
-```
-
-## Friendly Names
-
-You can also change how Antidote names the plugin directories by adding this to your`.zshrc`:
-
-```
-zstyle ':antidote:bundle' use-friendly-names 'yes'
+```text
+$ antidote bundle ohmyzsh/ohmyzsh path:plugins/extract
+fpath+=( "$HOME/.cache/repos/ohmyzsh/ohmyzsh/plugins/extract" )
+source "$HOME/.cache/repos/ohmyzsh/ohmyzsh/plugins/extract/extract.plugin.zsh"
 ```
 
-Now, the directories where plugins are stored is nicer to read. For example:
+## Conditional
 
-`https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions` becomes `zsh-users__zsh-autosuggestions`.
+`conditional:<function>` only loads the bundle if the named zero-argument function returns success. This config loads `zshzoo/macos` only on macOS:
 
+```text
+$ antidote bundle zshzoo/macos conditional:is-macos
+if is-macos; then
+  fpath+=( "$HOME/.cache/repos/zshzoo/macos" )
+  source "$HOME/.cache/repos/zshzoo/macos/macos.plugin.zsh"
+fi
 ```
+
+The function must already be defined at load time (e.g. provided by an earlier bundle or an autoloaded function).
+
+## Pre / Post
+
+`pre:<command>` and `post:<command>` run a command immediately before / after the bundle's load script. `post:` is handy for setup that needs the bundle's functions to be available first (and is deferred along with the bundle when used with `kind:defer`). For example, to call a setup function once a bundle is loaded:
+
+```text
+owner/repo post:my_setup_function
+```
+
+This config uses `post:` to run `compstyle_zshzoo_setup` after autoloading the `belak/zsh-utils` completion functions — see the [kind:autoload example](#kindautoload).
+
+## Autoload
+
+The `autoload:<path>` annotation adds `<bundle>/<path>` to `fpath` and autoloads its functions **in addition to** the bundle's normal sourcing. (This differs from `kind:autoload`, which autoloads *instead of* sourcing.)
+
+```text
+$ antidote bundle owner/repo autoload:functions
+```
+
+## Pin
+
+`pin:<sha>` locks a bundle to a specific commit. The SHA must be the full 40-character commit hash. Pinned bundles are skipped by `antidote update`.
+
+```text
+$ antidote bundle zsh-users/zsh-autosuggestions pin:85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
+```
+
+This is the same mechanism antidote uses for [snapshots](#snapshot).
+
+## Path style
+
+antidote names the directories under `$ANTIDOTE_HOME` according to the `path-style` zstyle:
+
+```zsh
+zstyle ':antidote:bundle' path-style 'short'
+```
+
+| Style | Example directory |
+| --- | --- |
+| `full` (default) | `$ANTIDOTE_HOME/github.com/zsh-users/zsh-autosuggestions` |
+| `short` | `$ANTIDOTE_HOME/zsh-users/zsh-autosuggestions` |
+| `escaped` | `$ANTIDOTE_HOME/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions` (antibody/antigen style) |
+
+This config uses `short`, set via the legacy `use-friendly-names` alias:
+
+```zsh
+zstyle ':antidote:bundle' use-friendly-names 'yes'   # equivalent to path-style short
+```
+
+```text
 $ antidote bundle zsh-users/zsh-autosuggestions
-fpath+=( /Users/matt/Library/Caches/antidote/zsh-users__zsh-autosuggestions )
-source /Users/matt/Library/Caches/antidote/zsh-users__zsh-autosuggestions/zsh-autosuggestions.plugin.zsh
+fpath+=( "$HOME/.cache/repos/zsh-users/zsh-autosuggestions" )
+source "$HOME/.cache/repos/zsh-users/zsh-autosuggestions/zsh-autosuggestions.plugin.zsh"
 ```
+
+If you switch styles, antidote will reuse an existing clone under another style and clean up the old directory on the next bundle.
 
 ## Commands
 
-Let’s look what other commands antidote has available for us!
+```text
+commands:
+  bundle    Clone bundle(s) and generate the static load script
+  install   Clone a new bundle and add it to your plugins file
+  update    Update antidote and its cloned bundles
+  purge     Remove a cloned bundle
+  home      Print where antidote is cloning bundles
+  list      List cloned bundles
+  path      Print the path of a cloned bundle
+  snapshot  Save, restore, or list bundle snapshots
+  init      Initialize the shell for dynamic bundles (legacy)
+```
 
 ## Home
 
-You can see where antidote is keeping the plugins with the `home` command:
+See where antidote keeps the plugins with `home`:
 
-```
+```text
 $ antidote home
 /Users/andrew.mason/.cache/repos
 ```
 
-Of course, you can remove the entire thing with:
+You can wipe the entire thing if you want to start fresh or switch tools:
 
-```
+```zsh
 rm -rf $(antidote home)
 ```
 
-if you decide to start fresh or to use something else.
+If you clear out your plugins, also remove the static file:
 
-If you clear out your plugins, don’t forget to also run:
-
-```
-rm "$ZDOTDIR/.zsh_plugins.zsh"
+```zsh
+rm "$ZDOTDIR/antidote_plugins.zsh"
 ```
 
 ## Install
 
-You can quickly add a plugin to your plugins file with `antidote install`:
+Quickly add a plugin to your plugins file with `antidote install`:
 
-```
+```text
 $ antidote install zsh-users/zsh-autosuggestions
 Bundle 'zsh-users/zsh-autosuggestions' added to '$ZDOTDIR/antidote_plugins.conf'.
 ```
 
-Don’t forget to reload zsh afterwards to load the plugin you just added!
+Reload zsh afterwards to load the plugin you just added.
 
 ## List
 
-You can list the plugins you have cloned to your antidote home folder:
+List the bundles cloned to your antidote home folder (format is `<path>` then `<url>`):
 
-```
+```text
 $ antidote list
-https://github.com/zsh-users/zsh-autosuggestions                 /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions
-https://github.com/zsh-users/zsh-history-substring-search        /Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-history-substring-search
+/Users/andrew.mason/.cache/repos/aloxaf/fzf-tab	https://github.com/aloxaf/fzf-tab
+/Users/andrew.mason/.cache/repos/atuinsh/atuin	https://github.com/atuinsh/atuin
+/Users/andrew.mason/.cache/repos/belak/zsh-utils	https://github.com/belak/zsh-utils
 # ...
 ```
 
 ## Load
 
-You can use `antidote load` in your `.zshrc` to clone and source everything in your plugins file, which by default is `${ZDOTDIR:-$HOME}/antidote_plugins.conf`:
+Use `antidote load` in your `.zshrc` to clone and source everything in your plugins file (default `${ZDOTDIR:-$HOME}/.zsh_plugins.txt`, or whatever `zstyle ':antidote:bundle' file` is set to):
 
-```
+```zsh
 # .zshrc
 # make a static plugins file and source it to load all your plugins
 antidote load
 ```
 
-It also takes a parameter if you prefer to use a custom plugins file:
+It also takes parameters for a custom plugins file (and optional static file):
 
-```
+```zsh
 # .zshrc
 antidote load ${ZDOTDIR:-~}/myplugins.conf
 ```
 
 ## Path
 
-You can see the path being used for a cloned bundle.
+See the path being used for a cloned bundle:
 
-```
+```text
 $ antidote path ohmyzsh/ohmyzsh
-/Users/matt/Library/Caches/antidote/https-COLON--SLASH--SLASH-github.com-SLASH-ohmyzsh-SLASH-ohmyzsh
+/Users/andrew.mason/.cache/repos/ohmyzsh/ohmyzsh
 ```
 
-This is particularly useful for projects like oh-my-zsh that rely on storing its path in the `$ZSH` environment variable:
+This is useful for projects like oh-my-zsh that rely on storing their path in the `$ZSH` environment variable:
 
-```
+```text
 $ ZSH=$(antidote path ohmyzsh/ohmyzsh)
 ```
 
 ## Purge
 
-You can remove a bundle completely by purging it:
+Remove a bundle completely by purging it:
 
-```
+```text
 $ antidote purge ohmyzsh/ohmyzsh
 Removing ohmyzsh/ohmyzsh...
 ```
 
 You can also remove all antidote bundles and the static cache file to start fresh:
 
-```
+```zsh
 $ rm -rf $(antidote home)
-$ rm ${ZDOTDIR:-~}/.zsh_plugins.zsh
+$ rm ${ZDOTDIR:-~}/antidote_plugins.zsh
 ```
 
 ## Update
 
-Antidote can update itself, and all bundles in a single pass.
+Antidote can update itself and all bundles in a single pass:
 
-Just run:
-
-```
+```text
 $ antidote update
 Updating antidote...
-Updating f6c4391..7b8d560
-...
-Updating all bundles in /Users/matt/Library/Caches/antidote...
+Updating all bundles in /Users/andrew.mason/.cache/repos...
 ...
 ```
+
+Bundles locked with `pin:` are skipped. In static mode, `antidote update` also writes a [snapshot](#snapshot) before updating so you can roll back.
+
+## Snapshot
+
+A snapshot is a bundle file where every repository is annotated with `kind:clone pin:<sha>`, capturing the exact commit of each cloned bundle — useful for reproducible setups and rollbacks.
+
+```text
+$ antidote snapshot save        # save a snapshot of current commits
+$ antidote snapshot list        # list available snapshots
+$ antidote snapshot restore     # restore the latest (or a given file)
+$ antidote snapshot remove      # remove snapshot file(s)
+$ antidote snapshot home        # print the snapshot directory
+```
+
+Snapshots are saved automatically during `antidote update` in static mode (not in dynamic mode). By default they live in `$XDG_DATA_HOME/antidote/snapshots` (`~/Library/Application Support/antidote/snapshots` on macOS), with a rolling history pruned beyond a configurable maximum.
 
 ## Performance Benchmarking
 
-Use `zsh-bench` for accurate measurements:
+Use `zsh-bench` for accurate measurements. This config bundles it on `$PATH`:
 
 ```text
 # antidote_plugins.conf
@@ -375,18 +468,16 @@ romkatv/zsh-bench kind:path
 
 ## Miscellaneous
 
-## Help getting started
+### Help getting started
 
-If you want to see a full-featured example Zsh configuration using antidote, you can have a look at the [zdotdir](https://github.com/getantidote/zdotdir) project. Feel free to incorporate code or plugins from it into your own dotfiles, or you can fork it to get started building your own Zsh config from scratch driven by antidote.
+For a full-featured example Zsh configuration using antidote, see the [zdotdir](https://github.com/getantidote/zdotdir) project. You can incorporate code or plugins from it into your own dotfiles, or fork it to start a config from scratch.
 
-Antidote is designed in such a way that it’s easy to use subplugins contained within frameworks like [Oh-My-Zsh](https://github.com/ohmyzsh/ohmyzsh) and [Prezto](https://github.com/sorin-ionescu/prezto).
+Antidote is designed so it's easy to use subplugins contained within frameworks like [Oh-My-Zsh](https://github.com/ohmyzsh/ohmyzsh) and [Prezto](https://github.com/sorin-ionescu/prezto). For more on using antidote with Oh-My-Zsh, see [Using OMZ](https://antidote.sh/using-omz); for Prezto, see [Using Prezto](https://antidote.sh/using-prezto).
 
-For more information about using antidote with Oh-My-Zsh, see the [Using OMZ](https://antidote.sh/using-omz) section. For Prezto, see the [Using Prezto](https://antidote.sh/using-prezto) section.
+### Completions
 
-## Completions
+For enabling Zsh completion features when using antidote, see the [completions](https://antidote.sh/completions) section. This config wires completions up with `mattmc3/ez-compinit` plus `zsh-users/zsh-completions kind:fpath path:src`.
 
-For information about enabling Zsh completion features when using antidote, see the [completions](https://antidote.sh/completions) section.
+### Troubleshooting
 
-## Troubleshooting
-
-Having trouble with antidote? [see troubleshooting tips here](https://antidote.sh/troubleshooting).
+Having trouble with antidote? [See the troubleshooting tips here.](https://antidote.sh/troubleshooting)

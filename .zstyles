@@ -10,7 +10,8 @@
 : ${ANTIDOTE_HOME:=${XDG_CACHE_HOME:-~/.cache}/repos}
 
 zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
-zstyle ':antidote:bundle' use-friendly-names 'yes'
+# Store clones as owner/repo (e.g. ~/.cache/repos/zsh-users/zsh-autosuggestions).
+zstyle ':antidote:bundle' path-style 'short'
 
 # set list-colors to enable filename colorizing
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}

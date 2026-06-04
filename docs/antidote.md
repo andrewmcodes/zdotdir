@@ -9,15 +9,15 @@ The moving parts in this `$ZDOTDIR`:
 | File | Role |
 | --- | --- |
 | `antidote_plugins.conf` | The plugins file (one bundle per line). This is the file you edit. |
-| `antidote_plugins.zsh` | The generated static load file. **Do not edit by hand** — `antidote load` regenerates it whenever the `.conf` is newer. |
+| `antidote_plugins.zsh` | The generated static load file, sourced **directly** by `.zshrc`. **Do not edit by hand** — it's regenerated from the `.conf` whenever the `.conf` is newer (gitignored). |
 | `.zstyles` | Sets the antidote zstyles (plugins file location, path style, etc.). |
-| `.zshrc` | Sources antidote and calls `antidote load`. |
+| `.zshrc` | Sources antidote, then sources the static file directly (regenerating it only when the `.conf` changes). |
 
 The static file name is derived from the plugins file name by swapping the extension, so `antidote_plugins.conf` always produces `antidote_plugins.zsh`.
 
 ## .zshrc
 
-The recommended way to use antidote is to source it and call `antidote load`. This config does exactly that in `.zshrc`:
+The simplest way to use antidote is to source it and call `antidote load`. For a bit more speed this config skips `antidote load`'s per-startup machinery and sources the static file directly, regenerating it only when the `.conf` changes (see [Ultra high performance install](#ultra-high-performance-install) for the rationale). The actual `.zshrc`:
 
 ```zsh
 # .zshrc
@@ -25,16 +25,21 @@ The recommended way to use antidote is to source it and call `antidote load`. Th
 # Source any zstyles first so antidote sees them (path style, plugins file, …).
 [[ ! -f ${ZDOTDIR:-$HOME}/.zstyles ]] || source ${ZDOTDIR:-$HOME}/.zstyles
 
-# Source antidote (Homebrew install) and load plugins.
-source ${HOMEBREW_PREFIX:-$(brew --prefix)}/opt/antidote/share/antidote/antidote.zsh
-antidote load
-```
+# Source antidote (keeps the `antidote` command available for list/update/install).
+source ${HOMEBREW_PREFIX}/opt/antidote/share/antidote/antidote.zsh
 
-`antidote load` turns the plugins file into a static load file and sources it. It only regenerates the static file when the plugins file is newer, so the cost on a normal startup is negligible.
+# Regenerate the static file only when the .conf changed, then source it directly.
+zsh_plugins=${ZDOTDIR:-$HOME}/antidote_plugins
+if [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.conf ]]; then
+  antidote bundle <${zsh_plugins}.conf >|${zsh_plugins}.zsh
+fi
+source ${zsh_plugins}.zsh
+unset zsh_plugins
+```
 
 ## .zstyles
 
-antidote reads its configuration from zstyles. This config sets the following in `.zstyles` (which must be sourced **before** `antidote load`):
+antidote reads its configuration from zstyles. This config sets the following in `.zstyles` (which must be sourced **before** antidote bundles or sources any plugins):
 
 ```zsh
 # Clone bundles under ~/.cache/repos instead of the default cache dir.
@@ -51,7 +56,7 @@ zstyle ':antidote:bundle' use-friendly-names 'yes'
 
 ## Ultra high performance install
 
-If you want to squeeze every last drop of performance out of antidote, you can do everything `antidote load` does on your own. If you're comfortable with zsh, this is a more robust `.zshrc` snippet:
+This config does everything `antidote load` does on its own — the `.zshrc` above is a trimmed version of the snippet below. Sourcing the static file directly avoids `antidote load`'s per-startup freshness checks and zstyle lookups (measured at ~27ms on this machine — roughly half of antidote's in-shell startup cost). The fuller, more portable form:
 
 ```zsh
 # ${ZDOTDIR:-~}/.zshrc
@@ -75,7 +80,7 @@ fi
 source ${zsh_plugins}.zsh
 ```
 
-This boils down to the bare essentials and runs `antidote bundle` only when absolutely necessary. Note you'll really only save small fractions of a second over the much simpler `antidote load`.
+This boils down to the bare essentials and runs `antidote bundle` only when the `.conf` changes. The saving over `antidote load` is small in absolute terms (~27ms) but a meaningful share of startup once the heavier costs (subprocess forks, etc.) are removed.
 
 ## Usage
 
@@ -97,9 +102,8 @@ MichaelAquilina/zsh-you-should-use
 # Completion styles — autoload the functions, then run setup afterward
 belak/zsh-utils path:completion/functions kind:autoload post:compstyle_zshzoo_setup
 
-# Keybindings / History / Utilities
+# Keybindings / Utilities
 belak/zsh-utils path:editor
-belak/zsh-utils path:history
 belak/zsh-utils path:utility
 
 # Load only on macOS
@@ -114,9 +118,9 @@ ohmyzsh/ohmyzsh path:plugins/extract
 # Fish-like features
 zdharma-continuum/fast-syntax-highlighting kind:defer  # defer slow syntax highlighting
 zsh-users/zsh-autosuggestions
-zsh-users/zsh-history-substring-search
-atuinsh/atuin
 ```
+
+> Shell history is **not** an antidote plugin here — `atuin` is a binary, initialized in `rc.d/zz-atuin.zsh`.
 
 Things to notice:
 
@@ -124,7 +128,7 @@ Things to notice:
 - **Empty lines and `#` comments are skipped.**
 - **Annotations** (`kind:`, `path:`, `conditional:`, `post:`, …) tune how each bundle is treated — see below.
 
-If you followed the recommended install, your plugins are already loaded once `antidote load` runs in `.zshrc`.
+If you followed the recommended install, your plugins are already loaded once `.zshrc` sources the static file.
 
 To regenerate the static file manually you can run `antidote bundle` yourself. It only needs to run when you change the plugins file:
 

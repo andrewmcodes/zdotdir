@@ -10,7 +10,7 @@ This repo is a modular ZSH setup for macOS powered by Homebrew, Antidote, fzf, z
    - Sets up `path` and `fpath` arrays
    - Autoloads all functions from `functions/` directory
    - Sources `.zstyles` for antidote/completion configuration
-   - Runs `antidote load` to source plugins from `antidote_plugins.conf`
+   - Sources the antidote static plugin file directly (regenerating it from `antidote_plugins.conf` only when the `.conf` changes; skips `antidote load`'s per-startup overhead)
    - Activates `mise` (version manager) and `fnox` (age-encrypted secrets)
    - Sources all `rc.d/*.zsh` files alphabetically
 
@@ -126,7 +126,7 @@ if command -v gls >/dev/null 2>&1; then
 | Standalone commands | `functions/*` | `grecent`, `is-macos`, `bench-startup` |
 | History settings | [rc.d/01-hist.zsh](../rc.d/01-hist.zsh) | `HISTFILE`, `SAVEHIST`, history options |
 | Directory shortcuts | [rc.d/02_dirs.zsh](../rc.d/02_dirs.zsh) | `hash -d` definitions |
-| Tool integrations | `rc.d/*.zsh` | `fzf.zsh`, `zoixide.zsh`, `sharship.zsh` |
+| Tool integrations | `rc.d/*.zsh` | `fzf.zsh`, `zoixide.zsh`, `sharship.zsh`, `zz-atuin.zsh` |
 | Plugins | `antidote_plugins.conf` | One plugin per line with annotations |
 
 ### External dependencies
@@ -135,7 +135,7 @@ if command -v gls >/dev/null 2>&1; then
 - **Core**: antidote, fzf, zoxide, mise, starship
 - **File tools**: eza, bat, ripgrep, fd, jq
 - **Dev tools**: tmux, overmind, chezmoi, neovim, vscode-insiders
-- **Shell history**: atuin (loaded as an antidote plugin; needs the `atuin` binary)
+- **Shell history**: atuin (initialized in `rc.d/zz-atuin.zsh` — a binary, not an antidote plugin; needs the `atuin` binary)
 - **Secrets**: fnox (installed via `mise`; age-encrypted; `fnox activate zsh` runs in `.zshrc`, key from `FNOX_AGE_KEY`)
 
 **Version management**: `mise` handles Ruby, Node, Python, Postgres, etc. Activated in `.zshrc` with `eval "$(mise activate zsh)"`.

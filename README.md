@@ -52,18 +52,18 @@ Plugins are managed via Antidote and configured in `antidote_plugins.conf`:
 - **[MichaelAquilina/zsh-you-should-use](https://github.com/MichaelAquilina/zsh-you-should-use)** - Alias reminder
 
 ### Core Features
-- **[belak/zsh-utils](https://github.com/belak/zsh-utils)** - Completion styles, editor bindings, history, utility functions
+- **[belak/zsh-utils](https://github.com/belak/zsh-utils)** - Completion styles, editor bindings, and utility functions
 - **[zshzoo/macos](https://github.com/zshzoo/macos)** - macOS-specific utilities
 - **[romkatv/zsh-bench](https://github.com/romkatv/zsh-bench)** - ZSH benchmarking
 - **[ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh)** - Extract plugin for archive handling
 
 ### Fish-like Features
-- **[zdharma-continuum/fast-syntax-highlighting](https://github.com/zdharma-continuum/fast-syntax-highlighting)** - Syntax highlighting
+- **[zdharma-continuum/fast-syntax-highlighting](https://github.com/zdharma-continuum/fast-syntax-highlighting)** - Syntax highlighting (deferred)
 - **[zsh-users/zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions)** - Command auto-suggestions
-- **[zsh-users/zsh-history-substring-search](https://github.com/zsh-users/zsh-history-substring-search)** - History search with arrow keys
 
-### Shell History
-- **[atuinsh/atuin](https://github.com/atuinsh/atuin)** - SQLite-backed, searchable shell history (requires the `atuin` binary)
+## Shell History
+
+Shell history is handled by **[atuin](https://github.com/atuinsh/atuin)** (SQLite-backed, searchable). It's a binary rather than an antidote plugin, so it's initialized in `rc.d/zz-atuin.zsh` (loaded after `fzf.zsh` so it owns `Ctrl-R` and the Up arrow). Requires the `atuin` binary. Run `atuin import auto` once to bring in existing shell history.
 
 ## Repository Structure
 
@@ -74,7 +74,7 @@ zdotdir/
 ├── .zshrc                 # Interactive shell configuration
 ├── .zstyles               # ZSH completion and plugin styles
 ├── antidote_plugins.conf  # Antidote plugin definitions (edit this)
-├── antidote_plugins.zsh   # Generated static load file (do not edit by hand)
+├── antidote_plugins.zsh   # Generated static load file, sourced directly by .zshrc (do not edit by hand)
 ├── docs/
 │   └── antidote.md        # Antidote usage and annotation reference
 ├── functions/             # Custom ZSH functions (auto-loaded, one per file)
@@ -92,9 +92,9 @@ zdotdir/
     ├── 05-aliases.zsh     # All shell aliases
     ├── 06-commands.zsh    # Custom shell functions
     ├── fzf.zsh            # FZF integration
-    ├── history-substring-search.zsh
     ├── sharship.zsh       # Starship prompt setup
-    └── zoixide.zsh        # Zoxide directory jumper setup
+    ├── zoixide.zsh        # Zoxide directory jumper setup
+    └── zz-atuin.zsh       # Atuin shell history (loads after fzf)
 ```
 
 ### Key Files

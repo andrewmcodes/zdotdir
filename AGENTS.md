@@ -10,15 +10,15 @@ Zsh sources these in a fixed order; this determines where new code belongs:
 
 1. **`.zshenv`** — sourced for *every* shell (scripts included). XDG base dirs, all `export`ed env vars (tool cache/config redirection, `EDITOR`/`VISUAL`, the assembled `FZF_DEFAULT_OPTS`, `FNOX_AGE_KEY`, etc.). Keep it minimal and fast — no subprocess-heavy work.
 2. **`.zprofile`** — login shells only. Currently just OrbStack init and the Obsidian PATH entry.
-3. **`.zshrc`** — interactive shells; the orchestrator. In order it: builds `path`/`fpath` (`typeset -gU` keeps them dedup'd), autoloads every file in `functions/`, sources `.zstyles`, runs `antidote load`, then `eval`s `mise activate` and `fnox activate`, and finally sources every `rc.d/*.zsh` alphabetically (skipping `~`-prefixed backups).
+3. **`.zshrc`** — interactive shells; the orchestrator. In order it: builds `path`/`fpath` (`typeset -gU` keeps them dedup'd), autoloads every file in `functions/`, sources `.zstyles`, sources antidote and the generated static plugin file directly (regenerating it only when the `.conf` is newer), then `eval`s `mise activate` and `fnox activate`, and finally sources every `rc.d/*.zsh` alphabetically (skipping `~`-prefixed backups).
 
-`rc.d/*.zsh` load order is alphabetical — numeric prefixes (`01-hist`, `02_dirs`, `04-opts`, `05-aliases`, `06-commands`) sequence the ordered ones; unprefixed tool files (`fzf`, `sharship`, `zoixide`, `history-substring-search`) load after. Add a numeric prefix when load order matters.
+`rc.d/*.zsh` load order is alphabetical — numeric prefixes (`01-hist`, `02_dirs`, `04-opts`, `05-aliases`, `06-commands`) sequence the ordered ones; unprefixed tool files (`fzf`, `sharship`, `zoixide`) load after, and `zz-atuin` (the `zz-` prefix is deliberate) loads last — after `fzf`, so atuin keeps the `Ctrl-R` and Up-arrow bindings. Add a numeric prefix to force early load, or a `zz-` prefix to force late.
 
 ## Plugins (Antidote)
 
 - **`antidote_plugins.conf` is the only file you edit.** `.zstyles` points Antidote at it (overriding the default `.zsh_plugins.txt`) and sets `ANTIDOTE_HOME=~/.cache/repos` with `path-style 'short'` (clone dirs as `owner/repo`).
-- `antidote load` (in `.zshrc`) regenerates a static load file from the `.conf` only when the `.conf` is newer, then sources it. Editing the `.conf` and running `exec zsh` is the whole workflow.
-- **Stale generated files exist in the repo** — `antidote_plugins.zsh` and `.zsh_plugins.zsh` are antidote output, never hand-edited; `.zsh_plugins.zsh` in particular is out of date (references powerlevel10k, which this config replaced with starship). Treat `antidote_plugins.conf` as the single source of truth for what's actually loaded; ignore the others.
+- `.zshrc` sources antidote (keeping the `antidote` command available), then sources the generated static load file (`antidote_plugins.zsh`) **directly**, regenerating it via `antidote bundle` only when the `.conf` is newer. This skips `antidote load`'s per-startup freshness machinery (~27ms). Editing the `.conf` and running `exec zsh` is still the whole workflow.
+- `antidote_plugins.zsh` is antidote output (never hand-edited) but **load-bearing** — `.zshrc` sources it directly. It's gitignored and regenerated whenever the `.conf` is newer. The separate `.zsh_plugins.zsh` is a **stale** leftover (references powerlevel10k, which this config replaced with starship) and is *not* sourced — ignore it. `antidote_plugins.conf` is the single source of truth for what's loaded.
 - Bundle annotations in use: `kind:fpath`, `kind:defer`, `kind:path`, `kind:autoload`, `path:`, `conditional:is-macos`, `post:`. See `docs/antidote.md` for the full annotation reference.
 - Common ops: `antidote list`, `antidote update`, `antidote install owner/repo`.
 
@@ -83,7 +83,7 @@ zunit run         # run zunit directly
 
 ## External dependencies
 
-Installed via Homebrew: `antidote fzf zoxide mise starship eza bat ripgrep fd jq neovim`, plus `chezmoi`, `overmind`, `tmux`. `fnox` (age-encrypted secrets, activated in `.zshrc`) is installed via `mise`. `mise` itself manages language/runtime versions (Ruby, Node, Postgres, …) and shims them; the Postgres helpers in `rc.d/06-commands.zsh` resolve binaries under `~/.local/share/mise/installs/postgres/<version>/`.
+Installed via Homebrew: `antidote fzf zoxide mise starship eza bat ripgrep fd jq neovim atuin`, plus `chezmoi`, `overmind`, `tmux`. `atuin` (SQLite-backed shell history) is initialized in `rc.d/zz-atuin.zsh` — it's a binary, not an antidote plugin. `fnox` (age-encrypted secrets, activated in `.zshrc`) is installed via `mise`. `mise` itself manages language/runtime versions (Ruby, Node, Postgres, …) and shims them; the Postgres helpers in `rc.d/06-commands.zsh` resolve binaries under `~/.local/share/mise/installs/postgres/<version>/`.
 
 ## Code style & commits
 

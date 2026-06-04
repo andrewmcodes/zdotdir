@@ -31,6 +31,16 @@ Fix performance issues in the ZSH configuration files and shell scripts to impro
     fi
     ~~~
 
+- Prefer hardcoded stable values over subprocess substitution
+  - Instead of (forks `brew` on every shell, incl. scripts via `.zshenv`):
+    ~~~zsh
+    export HOMEBREW_PREFIX="$(brew --prefix)"
+    ~~~
+  - Use (the prefix is fixed on a given machine):
+    ~~~zsh
+    export HOMEBREW_PREFIX=/opt/homebrew
+    ~~~
+
 - Optimize `compinit`
   - Instead of always running:
     ~~~zsh

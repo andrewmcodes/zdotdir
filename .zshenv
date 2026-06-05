@@ -12,8 +12,6 @@ if [[ "$OSTYPE" == darwin* ]]; then
   export SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
 fi
 
-# History
-export HISTFILE="$XDG_DATA_HOME/zsh/history"
 # Ruby
 export GEM_SPEC_CACHE="$XDG_CACHE_HOME/gem"
 export BUNDLE_USER_CACHE="$XDG_CACHE_HOME/bundle"

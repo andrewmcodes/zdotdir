@@ -3,7 +3,7 @@
 #
 setopt EXTENDED_GLOB
 
-HISTFILE=${XDG_DATA_HOME:=~/.local/share}/zsh/history.log
+HISTFILE="$XDG_DATA_HOME/zsh/history.log"
 
 # Just in case: If the parent directory doesn't exist, create it.
 [[ -d $HISTFILE:h ]] || mkdir -p $HISTFILE:h

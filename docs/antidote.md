@@ -49,10 +49,10 @@ antidote reads its configuration from zstyles. This config sets the following in
 zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
 
 # Store clones as owner/repo instead of the escaped antibody-style path.
-zstyle ':antidote:bundle' use-friendly-names 'yes'
+zstyle ':antidote:bundle' path-style 'short'
 ```
 
-> `use-friendly-names 'yes'` is a legacy alias for `path-style short` (see [Path style](#path-style)).
+> `path-style 'short'` is the modern form; `use-friendly-names 'yes'` is a legacy alias for it (see [Path style](#path-style)).
 
 ## Ultra high performance install
 
@@ -313,10 +313,10 @@ zstyle ':antidote:bundle' path-style 'short'
 | `short` | `$ANTIDOTE_HOME/zsh-users/zsh-autosuggestions` |
 | `escaped` | `$ANTIDOTE_HOME/https-COLON--SLASH--SLASH-github.com-SLASH-zsh-users-SLASH-zsh-autosuggestions` (antibody/antigen style) |
 
-This config uses `short`, set via the legacy `use-friendly-names` alias:
+This config sets `short` directly:
 
 ```zsh
-zstyle ':antidote:bundle' use-friendly-names 'yes'   # equivalent to path-style short
+zstyle ':antidote:bundle' path-style 'short'   # legacy alias: use-friendly-names 'yes'
 ```
 
 ```text

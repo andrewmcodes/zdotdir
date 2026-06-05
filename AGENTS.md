@@ -18,7 +18,7 @@ Zsh sources these in a fixed order; this determines where new code belongs:
 
 - **`antidote_plugins.conf` is the only file you edit.** `.zstyles` points Antidote at it (overriding the default `.zsh_plugins.txt`) and sets `ANTIDOTE_HOME=~/.cache/repos` with `path-style 'short'` (clone dirs as `owner/repo`).
 - `.zshrc` sources antidote (keeping the `antidote` command available), then sources the generated static load file (`antidote_plugins.zsh`) **directly**, regenerating it via `antidote bundle` only when the `.conf` is newer. This skips `antidote load`'s per-startup freshness machinery (~27ms). Editing the `.conf` and running `exec zsh` is still the whole workflow.
-- `antidote_plugins.zsh` is antidote output (never hand-edited) but **load-bearing** — `.zshrc` sources it directly. It's gitignored and regenerated whenever the `.conf` is newer. The separate `.zsh_plugins.zsh` is a **stale** leftover (references powerlevel10k, which this config replaced with starship) and is *not* sourced — ignore it. `antidote_plugins.conf` is the single source of truth for what's loaded.
+- `antidote_plugins.zsh` is antidote output (never hand-edited) but **load-bearing** — `.zshrc` sources it directly. It's gitignored and regenerated whenever the `.conf` is newer. `antidote_plugins.conf` is the single source of truth for what's loaded.
 - Bundle annotations in use: `kind:fpath`, `kind:defer`, `kind:path`, `kind:autoload`, `path:`, `conditional:is-macos`, `post:`. See `docs/antidote.md` for the full annotation reference.
 - Common ops: `antidote list`, `antidote update`, `antidote install owner/repo`.
 

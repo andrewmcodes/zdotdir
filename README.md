@@ -87,7 +87,7 @@ zdotdir/
 │   └── os
 └── rc.d/                  # Modular configuration files
     ├── 01-hist.zsh        # History configuration
-    ├── 02_dirs.zsh        # Directory stack configuration
+    ├── 02_dirs.zsh        # Named directory shortcuts (hash -d ~name)
     ├── 04-opts.zsh        # Shell options
     ├── 05-aliases.zsh     # All shell aliases
     ├── 06-commands.zsh    # Custom shell functions

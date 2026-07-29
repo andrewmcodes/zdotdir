@@ -3,7 +3,14 @@
 #
 
 # VI Mode
+#? belak/zsh-utils path:editor binds all three keymaps (emacs, viins, vicmd) but
+#? never selects one — this `bindkey -v` is what makes viins the main keymap, and
+#? the plugin's viins bindings are already in place when it runs.
 bindkey -v
+
+#* Cut the 400ms ESC lag; zsh's default KEYTIMEOUT=40 is unusable in vi mode.
+#* Not exported — ZLE reads it as a shell parameter, not an environment variable.
+KEYTIMEOUT=1
 
 # Colors
 autoload -U colors && colors

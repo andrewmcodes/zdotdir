@@ -1,8 +1,7 @@
-alias "...."="cd ../../"
-alias "..."="cd ../.." # Corrected alias
+alias "...."="cd ../../.."
+alias "..."="cd ../.."
 alias ".."="cd .."
 alias "~"="cd ~"
-alias %= \$= #? Define the % symbol as an alias for the $= symbol
 # New
 # Chezmoi
 alias cz="chezmoi"
@@ -52,7 +51,9 @@ alias hisG="history | grep"
 alias r="rails"
 alias rc="rails console"
 alias rDbc="rails dbconsole"
-alias rT="rails -T | awk '{print $2}' | fzf --preview 'rails {1} --help' | xargs -I {} rails {}"
+#* $2 must be escaped: in a double-quoted alias it expands at DEFINITION time,
+#* leaving `awk '{print }'` — which echoes whole lines instead of the task name.
+alias rT="rails -T | awk '{print \$2}' | fzf --preview 'rails {1} --help' | xargs -I {} rails {}"
 alias rdm="rails db:migrate"
 alias rG="rails generate"
 alias rR="rails routes"

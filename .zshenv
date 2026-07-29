@@ -97,7 +97,14 @@ export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e4e4e"
 export ZSH_AUTOSUGGEST_MANUAL_REBIND=1
 export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 # FNOX
-export FNOX_AGE_KEY=$(cat ~/.config/fnox/age.txt | grep "AGE-SECRET-KEY")
+#* Deliberately no FNOX_AGE_KEY here. fnox's age provider already defaults its
+#* identity to <config dir>/age.txt — i.e. $XDG_CONFIG_HOME/fnox/age.txt, where
+#* the key already lives — so exporting the raw age secret into every shell and
+#* every child process bought nothing. Verified: with FNOX_AGE_KEY unset, `fnox
+#* get` succeeds in all four repos that carry a fnox.toml, none of which
+#* override `key_file`. Don't re-add it; use the age provider's `key_file` field
+#* if the path ever needs to move (FNOX_AGE_KEY_FILE/age_key_file are the same
+#* option and fnox marks it deprecated).
 # Obsidian
 export OBSIDIAN_VAULT_PATH="$HOME/git/andrewmcodes/digital-brain"
 export OBSIDIAN_VAULT_NAME="digital-brain"

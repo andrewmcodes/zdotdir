@@ -1,0 +1,181 @@
+#!/usr/bin/env zunit
+
+#* Gotchas this file works around, worth knowing before editing it:
+#*   - zunit's hooks are `@setup { }` / `@teardown { }`, NOT `setup() { }`.
+#*   - a bare command returning non-zero FAILS the test with no message, so every
+#*     invocation we expect to fail goes through `run`.
+#*   - glob qualifiers need an UNQUOTED word: `$dir/x(N)`, never `"$dir/x"(N)`.
+#*     There's no `not_exists` assertion, so absence is asserted as a glob count.
+#*   - XDG_CACHE_HOME is redirected per test, so the real ~/.cache is never touched.
+
+@setup {
+  CE_HOME=$(mktemp -d)
+  CE_DIR="$CE_HOME/zsh/cached-eval"
+  PATH="$ZUNIT_SUPPORT_BIN:$PATH"
+}
+
+@teardown {
+  [[ -z $CE_HOME || $CE_HOME != /tmp/* && $CE_HOME != /private/* ]] || rm -rf -- "$CE_HOME"
+}
+
+# --- happy path --------------------------------------------------------------
+
+@test 'sources the command output and writes a cache file' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval ce-ok
+
+  assert $state equals 0
+  assert "$CE_DIR/ce-ok" is_file
+}
+
+@test 'the cache file holds the command output verbatim' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  run cat "$CE_DIR/ce-ok"
+  assert "${lines[1]}" same_as 'ZUNIT_CE_MARKER=sourced'
+}
+
+@test 'sourcing takes effect in the calling shell' {
+  unset ZUNIT_CE_MARKER
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  assert "$ZUNIT_CE_MARKER" same_as 'sourced'
+}
+
+@test 'a warm call is served from the cache, not by rerunning the command' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  #? Plant a marker the command itself would never produce. Note we can't test
+  #? this by breaking the fixture — rewriting it updates its mtime, which
+  #? correctly invalidates the cache via the -nt check.
+  print 'ZUNIT_CE_MARKER=from_cache' >! "$CE_DIR/ce-ok"
+  touch "$CE_DIR/ce-ok"
+
+  unset ZUNIT_CE_MARKER
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  assert "$ZUNIT_CE_MARKER" same_as 'from_cache'
+}
+
+# --- poison resistance -------------------------------------------------------
+
+@test 'a FAILING command leaves no cache file' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval ce-fail
+
+  assert $state equals 1
+  local -a f=($CE_DIR/ce-fail(N))
+  assert "${#f}" equals 0
+}
+
+@test 'a failing command leaves no temp file behind either' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval ce-fail
+
+  local -a t=($CE_DIR/*.tmp(N))
+  assert "${#t}" equals 0
+}
+
+@test 'a command that succeeds but prints nothing is not cached' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval ce-empty
+
+  assert $state equals 1
+  local -a f=($CE_DIR/ce-empty(N))
+  assert "${#f}" equals 0
+}
+
+@test 'a missing command returns 1 silently and caches nothing' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval definitely-not-a-real-tool init zsh
+
+  assert $state equals 1
+  assert "$output" is_empty
+}
+
+@test 'usage error when called with no arguments' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval
+
+  assert $state equals 2
+}
+
+# --- cache keying ------------------------------------------------------------
+
+@test 'different argument lists get different cache files' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok extra-arg
+
+  assert "$CE_DIR/ce-ok" is_file
+  assert "$CE_DIR/ce-ok-extra-arg" is_file
+}
+
+# --- invalidation ------------------------------------------------------------
+
+@test 'a cache older than the TTL is rebuilt' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+  touch -t 202001010000 "$CE_DIR/ce-ok"
+
+  XDG_CACHE_HOME=$CE_HOME ZSH_CACHED_EVAL_TTL=60 cached-eval ce-ok
+
+  #? Rebuilt == mtime is back inside the last 60 seconds.
+  local -a fresh=($CE_DIR/ce-ok(N.ms-60))
+  assert "${#fresh}" equals 1
+}
+
+@test 'a cache older than the tool binary is rebuilt' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+  touch -t 202001010000 "$CE_DIR/ce-ok"
+
+  #? TTL left at its default, so only the -nt binary check can trigger this.
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  local -a fresh=($CE_DIR/ce-ok(N.ms-60))
+  assert "${#fresh}" equals 1
+}
+
+# --- --clear / --list --------------------------------------------------------
+
+@test '--clear removes every cached file' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok extra-arg
+
+  XDG_CACHE_HOME=$CE_HOME run cached-eval --clear
+
+  assert $state equals 0
+  assert "${lines[1]}" contains 'cleared 2'
+  local -a f=($CE_DIR/*(N.))
+  assert "${#f}" equals 0
+}
+
+@test '--clear with a pattern removes only matching files' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok extra-arg
+
+  XDG_CACHE_HOME=$CE_HOME run cached-eval --clear extra
+
+  assert $state equals 0
+  assert "${lines[1]}" contains 'cleared 1'
+  assert "$CE_DIR/ce-ok" is_file
+  local -a gone=($CE_DIR/ce-ok-extra-arg(N))
+  assert "${#gone}" equals 0
+}
+
+@test '--clear with a non-matching pattern removes nothing' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  XDG_CACHE_HOME=$CE_HOME run cached-eval --clear zzz-no-such-thing
+
+  assert "${lines[1]}" contains 'cleared 0'
+  assert "$CE_DIR/ce-ok" is_file
+}
+
+@test '--clear on an empty cache reports zero and does not fail' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval --clear
+
+  assert $state equals 0
+  assert "${lines[1]}" contains 'cleared 0'
+}
+
+@test '--list names the cached entries' {
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  XDG_CACHE_HOME=$CE_HOME run cached-eval --list
+
+  assert $state equals 0
+  assert "${lines[1]}" same_as 'ce-ok'
+}

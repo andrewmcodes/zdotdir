@@ -1,0 +1,4 @@
+#!/bin/zsh
+#? Fixture: prints plausible-looking output but FAILS. cached-eval must not cache it.
+print 'ZUNIT_CE_MARKER=should_never_be_cached'
+exit 3

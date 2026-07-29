@@ -6,17 +6,21 @@
 # Dependencies:
 #   hyperfine (optional) for statistically robust measurements.
 
-set -euo pipefail
+#* `set -euo pipefail` leaks into the CALLING shell from an autoloaded function.
+#* `emulate -L zsh` scopes options to this function; it implies local_options.
+emulate -L zsh
+setopt pipefail
 
 runs=${1:-5}
 
 measure_basic() {
   echo "== Basic (time) measurement ($runs runs) =="
-  for i in $(seq 1 $runs); do
+  for i in {1..$runs}; do
     /usr/bin/env time -p zsh -i -c exit 2>&1 | awk -v i=$i '/^real/ {print "run " i ": " $2 "s"}'
   done | tee /tmp/zsh_startup_basic.txt
   echo "-- summary --"
-  awk '{print $2}' /tmp/zsh_startup_basic.txt | sed 's/s$//' | awk '
+  #? Lines are `run <i>: <secs>s` — the time is $3, not $2 (which is the run index).
+  awk '{print $3}' /tmp/zsh_startup_basic.txt | sed 's/s$//' | awk '
     NR==1 {min=max=$1}
     {sum+=$1; if($1<min) min=$1; if($1>max) max=$1}
     END {printf "min=%.3fs avg=%.3fs max=%.3fs (n=%d)\n", min, sum/NR, max, NR}'

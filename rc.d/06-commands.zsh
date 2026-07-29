@@ -86,10 +86,15 @@ function pg_switch {
 # }
 
 # Deletes selected git branches using fzf for interactive selection.
+#* `git for-each-ref` rather than `git branch`: it emits bare names, so there is
+#* no `* `/`+ ` prefix to strip and no `(HEAD detached at ...)` pseudo-entry. The
+#* awk filter handles both a branch name containing regex metacharacters and an
+#* empty $current (detached HEAD), either of which broke the old grep pipeline.
 function delete_git_branches() {
-  git branch |
-    grep --invert-match $(git branch --show-current) |
-    cut -c 3- |
+  local current
+  current=$(git branch --show-current)
+  git for-each-ref --format='%(refname:short)' refs/heads/ |
+    awk -v cur="$current" 'cur == "" || $0 != cur' |
     fzf --multi --preview="git log {} --" |
     xargs git branch --delete --force
 }

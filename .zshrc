@@ -60,8 +60,13 @@ export PKG_CONFIG_PATH="${HOMEBREW_PREFIX}/bin/pkg-config:${HOMEBREW_PREFIX}/opt
 #* `unset GOBIN GOROOT ...`, so it is neither cacheable nor safe to lazy-load
 #* behind a wrapper — the shims have to be on $path before anything resolves a
 #* binary. fnox likewise installs precmd/chpwd hooks that must exist up front.
+#* mise stays an eager, UNCACHED eval: its output embeds `export PATH='<snapshot
+#* of the generating shell's PATH>'` plus `unset GOBIN GOROOT LD_LIBRARY_PATH
+#* PGDATA SNYK_TOKEN`, so caching it would freeze $PATH. Verified: its output
+#* changes with PATH, while all five cached tools' output does not.
 (($+commands[mise])) && eval "$(mise activate zsh)"
-(($+commands[fnox])) && eval "$(fnox activate zsh)"
+#? fnox's activate output is static function + hook definitions — safe to cache.
+cached-eval fnox activate zsh
 
 # Source anything in rc.d.
 #* (.N): nullglob so an empty rc.d doesn't abort the rc file, and (.) so only

@@ -5,4 +5,5 @@
 #* "can't change option: zle" — two warnings in every bench-startup /
 #* zsh-bench measurement. A `[[ -o zle ]]` guard does NOT help: zle reads as
 #* set under `zsh -i -c` even though it can't be restored.
-source <(fzf --zsh) 2>/dev/null
+#? Cached: `fzf --zsh` output is invariant of PATH/PWD (verified).
+cached-eval fzf --zsh 2>/dev/null

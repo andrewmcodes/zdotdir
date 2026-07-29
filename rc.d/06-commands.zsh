@@ -1,5 +1,18 @@
 #* Creates a directory and then changes into it
-function mkcd() { mkdir -p "$@" && cd "$_"; }
+#? Single argument on purpose: `mkdir -p a b c && cd $_` would cd into `c` only,
+#? which is never what you meant. Quote paths containing spaces.
+function mkcd() { mkdir -p -- "$1" && cd -- "$1"; }
+
+#* Private (leading _ hides it from `funcs`): the running server's version, bare.
+#* `show server_version` can answer `17.2 (Homebrew)`, which would never match a
+#* mise install directory — so take the first word. `${=v}` word-splits, which
+#* also strips psql's leading padding and replaces the old `| xargs` fork.
+function _pg_running_version() {
+  local v
+  v=$(psql --no-psqlrc -t -c 'show server_version;' postgres) || return 1
+  local -a words=(${=v})
+  print -r -- "${words[1]}"
+}
 
 # Starts the PostgreSQL server using the version installed by mise.
 #
@@ -11,7 +24,11 @@ function mkcd() { mkdir -p "$@" && cd "$_"; }
 # Outputs: None
 # Example: pg_start
 function pg_start {
-  local version_to_run=$(mise which postgres | awk -F/ '{print $9}')
+  #? `:h:h:t` on .../installs/postgres/<version>/bin/postgres, not `awk -F/ '{print $9}'`
+  #? — field 9 only lands on the version because $HOME happens to be 2 levels deep.
+  local pg_bin version_to_run
+  pg_bin=$(mise which postgres) || return 1
+  version_to_run=${pg_bin:h:h:t}
   local pg_ctl_path="$HOME/.local/share/mise/installs/postgres/$version_to_run/bin/pg_ctl"
   local data_dir="$HOME/.local/share/mise/installs/postgres/$version_to_run/data"
 
@@ -28,7 +45,7 @@ function pg_start {
 # Example: pg_stop
 # Note: Ensure that the specified PostgreSQL versions are installed and properly configured in the expected directories.
 function pg_stop {
-  local currently_running_version=$(psql --no-psqlrc -t -c 'show server_version;' postgres | xargs)
+  local currently_running_version=$(_pg_running_version) || return 1
   local pg_ctl_path="$HOME/.local/share/mise/installs/postgres/$currently_running_version/bin/pg_ctl"
   local data_dir="$HOME/.local/share/mise/installs/postgres/$currently_running_version/data"
 
@@ -47,9 +64,9 @@ function pg_stop {
 # Example: pg_switch 13.3
 function pg_switch {
   local version_to_run=$1
-  local currently_running_version=$(psql --no-psqlrc -t -c 'show server_version;' postgres | xargs)
+  local currently_running_version=$(_pg_running_version) || return 1
 
-  if [ "$version_to_run" = "$currently_running_version" ]; then
+  if [[ "$version_to_run" == "$currently_running_version" ]]; then
     echo "Postgres $version_to_run is already running."
     return 1
   fi
@@ -72,19 +89,6 @@ function pg_switch {
   mise use -g postgres@$version_to_run
 }
 
-#* Rails function that will run the rails command in the correct context
-# function rails() {
-#   if [[ -f bin/rails ]]; then
-#     bin/rails "$@"
-#   elif [[ -f Gemfile && -f Gemfile.lock ]]; then
-#     bundle exec rails "$@"
-#   elif [[ -n "$(which rails)" ]]; then
-#     command rails "$@"
-#   else
-#     echo "Rails not found"
-#   fi
-# }
-
 # Deletes selected git branches using fzf for interactive selection.
 #* `git for-each-ref` rather than `git branch`: it emits bare names, so there is
 #* no `* `/`+ ` prefix to strip and no `(HEAD detached at ...)` pseudo-entry. The
@@ -100,8 +104,10 @@ function delete_git_branches() {
 }
 
 # Installs selected Homebrew formulae using fzf for interactive selection.
+#? -fsSL: without it curl pipes its progress meter into jq and fails silently on
+#? an HTTP error instead of reporting it.
 function install_casks() {
-  curl "https://formulae.brew.sh/api/cask.json" |
+  curl -fsSL "https://formulae.brew.sh/api/cask.json" |
     jq '.[].token' |
     tr -d '"' |
     fzf --multi --preview="curl https://formulae.brew.sh/api/cask/{}.json | jq '.'" |
@@ -109,8 +115,9 @@ function install_casks() {
 }
 
 # Pretty print the PATH variable with each path on a new line.
+#? `print -l` over `echo -e`: no escape-interpretation surprises in path names.
 function print_path() {
-  echo -e "${PATH//:/\\n}"
+  print -l -- ${(s.:.)PATH}
 }
 
 # This function, view_defaults, lists all macOS user defaults domains,

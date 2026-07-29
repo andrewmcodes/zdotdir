@@ -14,7 +14,8 @@
 #   those files, so they're excluded for free. Names starting with `_` are skipped.
 
 emulate -L zsh
-setopt local_options extended_glob no_nomatch
+#? `emulate -L zsh` already implies local_options, so it isn't repeated here.
+setopt extended_glob no_nomatch
 
 local zdotdir=${ZDOTDIR:-$HOME}
 local zfuncdir=${ZFUNCDIR:-$zdotdir/functions}
@@ -104,7 +105,8 @@ local -i w=0
 for name in $names; do (( ${#name} > w )) && w=${#name}; done
 
 # Group order: autoloaded functions first, then each rc.d file alphabetically.
-typeset -a cats ordered c
+typeset -a cats ordered
+local c
 for name in $names; do cats+=${cat[$name]}; done
 cats=(${(u)cats})
 for c in functions/ ${(o)cats}; do

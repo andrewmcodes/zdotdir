@@ -50,7 +50,9 @@ export VISUAL="code-insiders --wait"
 export EDITOR="nvim"
 export MANPAGER="less -X"
 # FZF
-export FZF_DEFAULT_OPTS='--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4'
+#* One palette only. This used to assign a Dracula palette here and then append
+#* the grey one below, producing FIVE --color= flags; since the grey palette sets
+#* every key the Dracula flags set, all four of those were dead weight.
 export FZF_DEFAULT_COMMAND="rg --no-messages --files --no-ignore --hidden --follow --glob '!.git/*'"
 typeset -a _fzf_colors=(
   fg:#EDEEF0
@@ -74,11 +76,11 @@ typeset -a _fzf_opts=(
   --history="$XDG_DATA_HOME/fzf/history.log"
   --no-separator
   --layout=reverse
-  --inline-info
+  --info=inline
   "--color=${(j:,:)_fzf_colors}"
 )
 
-# Merge with any existing options, preserving order
+#? Merge with any options inherited from the environment, preserving order.
 typeset -a _fzf_all=()
 if [[ -n "$FZF_DEFAULT_OPTS" ]]; then
   _fzf_all+=(${(z)FZF_DEFAULT_OPTS})
@@ -86,12 +88,14 @@ fi
 _fzf_all+=("${_fzf_opts[@]}")
 
 export FZF_DEFAULT_OPTS="${(j: :)_fzf_all}"
+unset _fzf_colors _fzf_opts _fzf_all
 # Zoxide
 export _ZO_DATA_DIR="$XDG_CACHE_HOME/zoxide"
 export _ZO_FZF_OPTS="--no-sort --keep-right --height=50% --info=inline --layout=reverse --exit-0 --select-1 --bind=ctrl-z:ignore --preview='\command eza --long --all {2..}' --preview-window=right"
 
 # Plugins
-export ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets cursor root line)
+#? ZSH_HIGHLIGHT_HIGHLIGHTERS is not set here: it's read by zsh-syntax-highlighting,
+#? but this config uses zdharma-continuum/fast-syntax-highlighting, which ignores it.
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e4e4e"
 #* Skip re-binding widgets on every precmd (perf win); don't suggest on large pastes.
 export ZSH_AUTOSUGGEST_MANUAL_REBIND=1

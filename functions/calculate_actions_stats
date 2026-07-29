@@ -1,14 +1,31 @@
 #!/bin/zsh
+# calculate_actions_stats: Read one number per line on stdin, print its average and median.
+#
+# Usage:
+#   fetch_action_stats | calculate_actions_stats
+#   printf '5\n1\n3\n' | calculate_actions_stats   # -> avg=3.0 / median=3.0
+#
+# Input need not be sorted — `fetch_action_stats` emits reverse-chronological
+# order, so the values are sorted here before the median is taken.
 
 main() {
-   awk '{
-    a[NR] = $1; sum+=$1
+  awk '{
+    a[NR] = $1 + 0; sum += $1
   }
   END {
-    PROCINFO["sorted_in"] = "@ind_num_asc"
     n = NR
-    avg = sum/n
-    med = (n%2 ? a[int(n/2)+1] : (a[n/2]+a[n/2+1])/2)
+    if (n == 0) exit
+    # A median needs sorted input. POSIX awk has no asort() and PROCINFO
+    # ["sorted_in"] is a gawk extension that only affects `for (k in arr)`
+    # iteration anyway -- which this never uses. So sort in place; an insertion
+    # sort keeps this a single process and n is small (a CI run count).
+    for (i = 2; i <= n; i++) {
+      v = a[i]
+      for (j = i - 1; j >= 1 && a[j] > v; j--) a[j + 1] = a[j]
+      a[j + 1] = v
+    }
+    avg = sum / n
+    med = (n % 2 ? a[int(n / 2) + 1] : (a[n / 2] + a[n / 2 + 1]) / 2)
     printf "avg=%.1f\nmedian=%.1f\n", avg, med
   }'
 }

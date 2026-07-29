@@ -92,8 +92,8 @@ zdotdir/
     ├── 05-aliases.zsh     # All shell aliases
     ├── 06-commands.zsh    # Custom shell functions
     ├── fzf.zsh            # FZF integration
-    ├── sharship.zsh       # Starship prompt setup
-    ├── zoixide.zsh        # Zoxide directory jumper setup
+    ├── starship.zsh       # Starship prompt setup
+    ├── zoxide.zsh         # Zoxide directory jumper setup
     └── zz-atuin.zsh       # Atuin shell history (loads after fzf)
 ```
 

@@ -12,7 +12,7 @@ Zsh sources these in a fixed order; this determines where new code belongs:
 2. **`.zprofile`** — login shells only. Currently just OrbStack init and the Obsidian PATH entry.
 3. **`.zshrc`** — interactive shells; the orchestrator. In order it: builds `path`/`fpath` (`typeset -gU` keeps them dedup'd), autoloads every file in `functions/`, sources `.zstyles`, sources antidote and the generated static plugin file directly (regenerating it only when the `.conf` is newer), then `eval`s `mise activate` and `fnox activate`, and finally sources every `rc.d/*.zsh` alphabetically (skipping `~`-prefixed backups).
 
-`rc.d/*.zsh` load order is alphabetical — numeric prefixes (`01-hist`, `02_dirs`, `04-opts`, `05-aliases`, `06-commands`) sequence the ordered ones; unprefixed tool files (`fzf`, `sharship`, `zoixide`) load after, and `zz-atuin` (the `zz-` prefix is deliberate) loads last — after `fzf`, so atuin keeps the `Ctrl-R` and Up-arrow bindings. Add a numeric prefix to force early load, or a `zz-` prefix to force late.
+`rc.d/*.zsh` load order is alphabetical — numeric prefixes (`01-hist`, `02_dirs`, `04-opts`, `05-aliases`, `06-commands`) sequence the ordered ones; unprefixed tool files (`fzf`, `starship`, `zoxide`) load after, and `zz-atuin` (the `zz-` prefix is deliberate) loads last — after `fzf`, so atuin keeps the `Ctrl-R` and Up-arrow bindings. Add a numeric prefix to force early load, or a `zz-` prefix to force late.
 
 ## Plugins (Antidote)
 

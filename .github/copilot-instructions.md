@@ -126,7 +126,7 @@ if command -v gls >/dev/null 2>&1; then
 | Standalone commands | `functions/*` | `grecent`, `is-macos`, `bench-startup` |
 | History settings | [rc.d/01-hist.zsh](../rc.d/01-hist.zsh) | `HISTFILE`, `SAVEHIST`, history options |
 | Directory shortcuts | [rc.d/02_dirs.zsh](../rc.d/02_dirs.zsh) | `hash -d` definitions |
-| Tool integrations | `rc.d/*.zsh` | `fzf.zsh`, `zoixide.zsh`, `sharship.zsh`, `zz-atuin.zsh` |
+| Tool integrations | `rc.d/*.zsh` | `fzf.zsh`, `zoxide.zsh`, `starship.zsh`, `zz-atuin.zsh` |
 | Plugins | `antidote_plugins.conf` | One plugin per line with annotations |
 
 ### External dependencies

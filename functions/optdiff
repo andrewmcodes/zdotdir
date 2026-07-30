@@ -1,0 +1,137 @@
+#!/bin/zsh
+# optdiff: Show which shell options this config changes from a pristine zsh, and
+#          which file (if any) is responsible.
+#
+# Usage:
+#   optdiff              # changed options, each attributed to a source
+#   optdiff --plugins    # only options NOT set by a file in $ZDOTDIR
+#   optdiff --raw        # bare option names, one per line (pipe-friendly)
+#
+# How it works: bare `setopt` already prints every option that differs from zsh's
+# defaults — in both directions (`noclobber` as readily as `autocd`) — so the
+# comparison is a set subtraction against a pristine interactive shell
+# (`zsh -df -o interactive -c setopt`). One fork, no GNU tools. The reverse
+# subtraction is never interesting: it can only ever hold `norcs`/`noglobalrcs`,
+# which are artifacts of the `-df` used to get a pristine shell.
+#
+#* Attribution is a heuristic: it scans setopt/unsetopt words in $ZDOTDIR's own
+#* startup files. Anything unattributed comes from a plugin, a tool's `init`
+#* output, /etc/zshrc, or zsh itself — which is the useful part: `noflowcontrol`
+#* is belak/zsh-utils and `promptsubst` is `starship init`, neither of them us.
+#* When more than one of our files touches an option, all of them are listed:
+#* that is the duplicate/conflict this command exists to surface.
+#
+#* Blind spot: an option we set that matches zsh's default (`setopt BANG_HIST`)
+#* changes nothing, so `setopt` never reports it and it cannot appear here.
+
+main() {
+  #* Capture the caller's options FIRST. The `emulate`/`setopt` below would
+  #* otherwise make this report optdiff's own scratch state, not the shell's.
+  local -a mine=(${(f)"$(setopt)"})
+
+  emulate -L zsh
+  #? `emulate -L zsh` already implies local_options, so it isn't repeated here.
+  setopt extended_glob
+
+  local mode=${1:-}
+  case $mode in
+    ''|--plugins|--raw) ;;
+    *)
+      print -ru2 -- "optdiff: unknown option: $mode"
+      print -ru2 -- 'usage: optdiff [--plugins|--raw]'
+      return 2
+      ;;
+  esac
+
+  local -a base=(${(f)"$(command zsh -df -o interactive -c setopt 2>/dev/null)"})
+  if (( ! ${#${base:#}} )); then
+    print -ru2 -- 'optdiff: could not read a pristine zsh baseline.'
+    return 1
+  fi
+
+  #? Options this shell has that a pristine interactive shell does not.
+  local -a changed=(${${mine:|base}:#})
+
+  if (( ! $#changed )); then
+    #? --raw feeds a pipe, so it stays silent rather than emitting prose.
+    [[ $mode == --raw ]] || print -- 'optdiff: no options differ from a pristine interactive zsh.'
+    return 0
+  fi
+
+  #? The canonical option names, as zsh spells them: lowercase, no underscores,
+  #? and no `no` prefix — except for the handful genuinely named that way
+  #? (`nomatch`, `notify`). Doubles as a filter: a word that does not normalise
+  #? to one of these is prose from a trailing comment, not an option.
+  local -A is_opt=()
+  local k
+  for k in ${(k)options}; do is_opt[$k]=1; done
+
+  #? Every spelling of an option folds onto one key, so `unsetopt nomatch` in a
+  #? file matches `nonomatch` from setopt, and `setopt no_beep` matches `nobeep`.
+  local -A ours=()
+  local file line word norm
+  for file in \
+      ${ZDOTDIR:-$HOME}/.zshenv(.N) \
+      ${ZDOTDIR:-$HOME}/.zprofile(.N) \
+      ${ZDOTDIR:-$HOME}/.zshrc(.N) \
+      ${ZDOTDIR:-$HOME}/.zlogin(.N) \
+      ${ZDOTDIR:-$HOME}/.zstyles(.N) \
+      ${ZDOTDIR:-$HOME}/rc.d/*.zsh(.N); do
+    while IFS= read -r line; do
+      [[ $line == [[:space:]]#\#* ]] && continue
+      [[ $line == *(setopt|unsetopt)[[:space:]]* ]] || continue
+      for word in ${(z)line}; do
+        #? A trailing comment ends the interesting part of the line.
+        [[ $word == \#* ]] && break
+        [[ $word == (setopt|unsetopt) ]] && continue
+        [[ $word == [A-Za-z_]## ]] || continue
+        norm=${${word:l}//_/}
+        if [[ -z ${is_opt[$norm]} ]]; then
+          norm=${norm#no}
+          [[ -n ${is_opt[$norm]} ]] || continue
+        fi
+        #? Record each file once, in load order, so duplicates are visible.
+        [[ " ${ours[$norm]} " == *" ${file:t} "* ]] && continue
+        ours[$norm]=${ours[$norm]:+${ours[$norm]}, }${file:t}
+      done
+    done < $file
+  done
+
+  local -a rows=()
+  local opt src
+  local -i w=6
+  for opt in ${(o)changed}; do
+    if [[ $mode == --raw ]]; then
+      print -r -- $opt
+      continue
+    fi
+    norm=${${opt:l}//_/}
+    if [[ -z ${is_opt[$norm]} ]]; then
+      norm=${norm#no}
+    fi
+    src=${ours[$norm]}
+    [[ $mode == --plugins && -n $src ]] && continue
+    rows+="$opt"$'\t'"${src:-(plugin, tool init, /etc/zshrc, or zsh)}"
+    (( ${#opt} > w )) && w=${#opt}
+  done
+  [[ $mode == --raw ]] && return 0
+
+  if (( ! $#rows )); then
+    print -- 'optdiff: every changed option is set by a file in $ZDOTDIR.'
+    return 0
+  fi
+
+  printf '%-*s  %s\n' $w 'OPTION' 'SET BY'
+  printf '%-*s  %s\n' $w ${(l:w::-:)} '------'
+  local row
+  for row in $rows; do
+    printf '%-*s  %s\n' $w ${row%%$'\t'*} ${row##*$'\t'}
+  done
+  if [[ $mode == --plugins ]]; then
+    print -- "\n${#rows} of ${#changed} changed option(s) are not set by a file in \$ZDOTDIR."
+  else
+    print -- "\n${#rows} option(s) differ from a pristine interactive zsh."
+  fi
+}
+
+main "$@"

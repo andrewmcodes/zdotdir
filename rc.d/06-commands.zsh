@@ -131,3 +131,22 @@ function view_defaults() {
     fzf --preview="defaults export {} - | python3 -c \"import sys,plistlib,pprint; pprint.pprint(plistlib.loads(sys.stdin.read().encode('utf-8')))\"" |
     xargs -n1 -I{} sh -c 'defaults export $1 - > $1.plist' -- {}
 }
+
+# Create files, making any missing parent directories along the way.
+#? ${f:h} is zsh's dirname; for a bare filename it yields `.`, and `mkdir -p .` is a
+#? harmless no-op, so bare names need no special-casing.
+function touchf() {
+  (( $# )) || { print -u2 -- 'usage: touchf <file>...'; return 1; }
+  local f
+  for f in "$@"; do
+    mkdir -p -- "${f:h}" && touch -- "$f"
+  done
+}
+
+# A no-op `$` so a `$ some-command` line pasted from a README just runs.
+#? Must be written as `function $` — `$() { ... }` parses as a command substitution.
+#* Only the *command* position is affected; $VAR / $(cmd) expansion is untouched,
+#* since parameter expansion happens before command lookup.
+function $ {
+  "$@"
+}

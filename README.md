@@ -159,6 +159,8 @@ any function you add shows up automatically as long as it has a leading comment.
 | `fetch_action_stats` | Fetch GitHub Actions run durations for a workflow |
 | `calculate_actions_stats` | Compute avg/median from piped `fetch_action_stats` output |
 | `mkcd` | Create a directory and `cd` into it |
+| `touchf` | Create files, making any missing parent directories along the way |
+| `$` | No-op, so a `$ some-command` line pasted from a README just runs (not listed by `funcs`) |
 | `pg_start` | Start the PostgreSQL server installed by mise |
 | `pg_stop` | Stop the currently running PostgreSQL server |
 | `pg_switch` | Switch the running PostgreSQL server to a given version |
@@ -179,6 +181,7 @@ This document provides a comprehensive list of all available aliases organized b
 | `...` | `cd ../..` | Navigate up two directory levels |
 | `..` | `cd ..` | Navigate up one directory level |
 | `~` | `cd ~` | Navigate to home directory |
+| `iwd` | `cd $IWD` | Back to the directory this shell started in |
 
 ## Chezmoi Aliases
 

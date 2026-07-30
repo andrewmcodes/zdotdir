@@ -118,14 +118,28 @@
 }
 
 @test 'a cache older than the tool binary is rebuilt' {
-  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
-  touch -t 202001010000 "$CE_DIR/ce-ok"
+  #? The cache must stay INSIDE the TTL window, or the TTL check rebuilds it and
+  #? the -nt comparison is never reached — which is why this uses a private copy
+  #? of the fixture whose mtime it can push forward, rather than an old cache.
+  mkdir -p "$CE_HOME/bin"
+  cp "$ZUNIT_SUPPORT_BIN/ce-ok" "$CE_HOME/bin/ce-ok"
+  PATH="$CE_HOME/bin:$PATH"
 
-  #? TTL left at its default, so only the -nt binary check can trigger this.
   XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
 
-  local -a fresh=($CE_DIR/ce-ok(N.ms-60))
-  assert "${#fresh}" equals 1
+  #? Poison the cache in place, keeping its mtime recent, then make the binary
+  #? newer. Only the -nt check can notice, and if it doesn't, the marker below
+  #? comes back as from_cache.
+  print 'ZUNIT_CE_MARKER=from_cache' >! "$CE_DIR/ce-ok"
+  sleep 1
+  touch "$CE_HOME/bin/ce-ok"
+
+  unset ZUNIT_CE_MARKER
+  XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
+
+  assert "$ZUNIT_CE_MARKER" same_as 'sourced'
+  run cat "$CE_DIR/ce-ok"
+  assert "${lines[1]}" same_as 'ZUNIT_CE_MARKER=sourced'
 }
 
 # --- --clear / --list --------------------------------------------------------

@@ -13,6 +13,13 @@ zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
 # Store clones as owner/repo (e.g. ~/.cache/repos/zsh-users/zsh-autosuggestions).
 zstyle ':antidote:bundle' path-style 'short'
 
+#? Byte-compile the plugin files and the generated static loader, so each `source`
+#? loads a .zwc instead of re-parsing the script. The `:antidote:*` pattern covers
+#? both `:antidote:bundle:<repo>` (per-plugin) and `:antidote:static` (the loader —
+#? which makes antidote emit a self-zrecompiling preamble into antidote_plugins.zsh).
+#* Separate from ~/.cache/zsh/zcompdump.zwc, which ez-compinit compiles itself.
+zstyle ':antidote:*' zcompile 'yes'
+
 # Completions: cache + zcompile the zcompdump (skips insecure-dir checks; ~daily refresh).
 #? No manual dump-clearing needed any more — rc.d/03-completion.zsh stamps $fpath
 #? beside the dump and forces a rebuild whenever it changes.

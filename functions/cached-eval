@@ -4,7 +4,7 @@
 #
 # Usage:
 #   cached-eval starship init zsh    # instead of: eval "$(starship init zsh)"
-#   cached-eval --list               # show what's cached, oldest first
+#   cached-eval --list               # show what's cached, most recently built first
 #   cached-eval --clear              # drop every cached file
 #   cached-eval --clear starship     # drop only caches matching *starship*
 #

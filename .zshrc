@@ -18,7 +18,9 @@ path=(
 )
 
 ZFUNCDIR=${ZDOTDIR:-$HOME}/functions
-fpath=($ZFUNCDIR $fpath)
+#? completions/ holds hand-written `_name` completion files. (-/FN): only if it's a
+#? directory, nullglob so a missing dir vanishes silently instead of erroring.
+fpath=($ZFUNCDIR ${ZDOTDIR:-$HOME}/completions(-/FN) $fpath)
 #* (N) matters: without nullglob an empty functions/ aborts this whole rc file with
 #* "no matches found". The count guard matters too — bare `autoload -Uz` with no
 #* arguments prints the autoload list instead of doing nothing.

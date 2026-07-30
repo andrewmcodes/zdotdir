@@ -26,3 +26,31 @@ if [[ ! -r $_compdump_stamp || ${(j.:.)fpath} != "$(<$_compdump_stamp)" ]]; then
   rm -f -- $ZSH_COMPDUMP $ZSH_COMPDUMP.zwc
 fi
 unset _compdump_stamp
+
+#
+# Completion — teach the short aliases to complete like the real command
+#
+#* These use the `compdef` FUNCTION's `name=service` form. Note that the
+#* `#compdef name=service` file-tag form does not exist: compinit's file tag only
+#* accepts `<names>`, `-p/-P <patterns>`, `-k` and `-K`, and registers the file's
+#* own function for those names.
+#
+#* Safe to call here even though compinit hasn't run yet — ez-compinit installs a
+#* `compdef` shim that queues these and replays them once the real compinit runs.
+#
+#? Without this, `g <TAB>` offers nothing (COMPLETE_ALIASES is off but that only
+#? helps the command word), and `r` completes as zsh's *builtin* `r` via `_fc`,
+#? which is actively wrong now that `r` is aliased to rails.
+_alias_compdefs=(
+  g=git
+  b=bundle
+  be=bundle
+  cz=chezmoi
+  y=yarn
+  r=rails
+)
+for _ac in $_alias_compdefs; do
+  #? Only map it if the target command is actually installed.
+  (($+commands[${_ac#*=}])) && compdef $_ac
+done
+unset _alias_compdefs _ac

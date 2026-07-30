@@ -81,7 +81,13 @@ typeset -a _fzf_opts=(
 )
 
 #? Merge with any options inherited from the environment, preserving order.
-typeset -a _fzf_all=()
+#* -U (unique) is what keeps this idempotent. .zshenv runs for EVERY zsh, so a
+#* nested shell — or the `exec zsh` reload this config recommends — re-reads an
+#* FZF_DEFAULT_OPTS that already contains our words and would otherwise append a
+#* second copy, growing the exported variable by ~315 bytes per generation. -U
+#* keeps the first occurrence, so a genuinely different inherited flag survives
+#* while our own words never duplicate.
+typeset -aU _fzf_all=()
 if [[ -n "$FZF_DEFAULT_OPTS" ]]; then
   _fzf_all+=(${(z)FZF_DEFAULT_OPTS})
 fi

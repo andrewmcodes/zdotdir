@@ -81,20 +81,25 @@ typeset -a _fzf_opts=(
 )
 
 #? Merge with any options inherited from the environment, preserving order.
-#* -U (unique) is what keeps this idempotent. .zshenv runs for EVERY zsh, so a
-#* nested shell — or the `exec zsh` reload this config recommends — re-reads an
-#* FZF_DEFAULT_OPTS that already contains our words and would otherwise append a
-#* second copy, growing the exported variable by ~315 bytes per generation. -U
-#* keeps the first occurrence, so a genuinely different inherited flag survives
-#* while our own words never duplicate.
-typeset -aU _fzf_all=()
+#* .zshenv runs for EVERY zsh, so a nested shell — or the `exec zsh` reload this
+#* config recommends — re-reads an FZF_DEFAULT_OPTS that already contains our
+#* words and would otherwise append a second copy, growing the exported variable
+#* by ~315 bytes per generation. Hence appending only the words not already there.
+#* Deliberately NOT `typeset -aU`: uniquifying the whole array also collapses a
+#* legitimately REPEATED inherited word, and repeating a flag is normal in fzf.
+#* An inherited `--bind a:x --bind b:y` became `--bind a:x b:y`, and every later
+#* fzf call in that shell died with "unknown option: b:y".
+typeset -a _fzf_all=()
 if [[ -n "$FZF_DEFAULT_OPTS" ]]; then
   _fzf_all+=(${(z)FZF_DEFAULT_OPTS})
 fi
-_fzf_all+=("${_fzf_opts[@]}")
+#? (Ie) is an exact-match index lookup: 0 when the word isn't in the array yet.
+for _fzf_o in "${_fzf_opts[@]}"; do
+  (( ${_fzf_all[(Ie)$_fzf_o]} )) || _fzf_all+=("$_fzf_o")
+done
 
 export FZF_DEFAULT_OPTS="${(j: :)_fzf_all}"
-unset _fzf_colors _fzf_opts _fzf_all
+unset _fzf_colors _fzf_opts _fzf_all _fzf_o
 # Zoxide
 export _ZO_DATA_DIR="$XDG_CACHE_HOME/zoxide"
 export _ZO_FZF_OPTS="--no-sort --keep-right --height=50% --info=inline --layout=reverse --exit-0 --select-1 --bind=ctrl-z:ignore --preview='\command eza --long --all {2..}' --preview-window=right"

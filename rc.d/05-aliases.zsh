@@ -100,7 +100,10 @@ alias b="bundle"
 alias be="bundle exec"
 alias up="git pull && bundle check || bundle && yarn && rails db:migrate"
 
-alias diff="diff --color"
+#? Compose rather than clobber: this adds a flag to the SAME binary, so preserve any
+#? alias a plugin already set (belak/zsh-utils does exactly this for `ls` and `grep`).
+#? Contrast the eza/bat aliases below, which REPLACE the binary and must clobber.
+alias diff="${aliases[diff]:-diff} --color"
 alias g="git"
 alias ga="git add"
 alias gb="git branch"

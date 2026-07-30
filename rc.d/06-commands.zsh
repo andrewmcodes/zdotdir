@@ -45,7 +45,10 @@ function pg_start {
 # Example: pg_stop
 # Note: Ensure that the specified PostgreSQL versions are installed and properly configured in the expected directories.
 function pg_stop {
-  local currently_running_version=$(_pg_running_version) || return 1
+  #* Declared, then assigned. `local v=$(cmd) || return` cannot work: the exit
+  #* status is `local`'s, which is 0 whatever the command substitution did.
+  local currently_running_version
+  currently_running_version=$(_pg_running_version) || return 1
   local pg_ctl_path="$HOME/.local/share/mise/installs/postgres/$currently_running_version/bin/pg_ctl"
   local data_dir="$HOME/.local/share/mise/installs/postgres/$currently_running_version/data"
 
@@ -64,7 +67,9 @@ function pg_stop {
 # Example: pg_switch 13.3
 function pg_switch {
   local version_to_run=$1
-  local currently_running_version=$(_pg_running_version) || return 1
+  #* Declared, then assigned — see the note in pg_stop.
+  local currently_running_version
+  currently_running_version=$(_pg_running_version) || return 1
 
   if [[ "$version_to_run" == "$currently_running_version" ]]; then
     echo "Postgres $version_to_run is already running."

@@ -14,7 +14,8 @@ zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
 zstyle ':antidote:bundle' path-style 'short'
 
 # Completions: cache + zcompile the zcompdump (skips insecure-dir checks; ~daily refresh).
-#* After adding new completions, clear the cached dump so they're picked up.
+#? No manual dump-clearing needed any more — rc.d/03-completion.zsh stamps $fpath
+#? beside the dump and forces a rebuild whenever it changes.
 zstyle ':plugin:ez-compinit' 'use-cache' 'yes'
 
 #* No `list-colors` here. It used to be set from ${(s.:.)LS_COLORS}, but LS_COLORS

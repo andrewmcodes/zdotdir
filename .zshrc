@@ -3,6 +3,12 @@
 # .zshrc - Zsh file loaded on interactive shell sessions.
 #
 
+#? Opt-in startup profiling: `zprofrc` (alias) starts a shell with ZPROFRC=1, which
+#? loads zsh/zprof here and dumps the report at the very end of this file. Profiling
+#? a *fresh* shell this way is the only reliable recipe — `source ~/.zshrc` in an
+#? already-initialized shell double-counts anything guarded/cached on first run.
+[[ "$ZPROFRC" -ne 1 ]] || zmodload zsh/zprof
+
 # Lazy-load (autoload) Zsh function files from a directory.
 
 # Ensure path arrays do not contain duplicates.
@@ -81,3 +87,12 @@ for _rc in ${ZDOTDIR:-$HOME}/rc.d/*.zsh(.N); do
   fi
 done
 unset _rc
+
+#? Companion to the zmodload at the top — report only when profiling was opted into.
+[[ "$ZPROFRC" -ne 1 ]] || zprof
+
+#* Keep `true` last so the first prompt always sees $? == 0. Nothing above ends
+#* falsely today (`unset _rc` returns 0), so this is future-proofing against a
+#* reordering that leaves a failing test as the last statement — starship would
+#* render that as an error status on a shell that started fine.
+true

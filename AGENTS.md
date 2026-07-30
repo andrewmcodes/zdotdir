@@ -62,9 +62,12 @@ source ~/.zshrc   # quicker, but can leave stale state; prefer exec zsh
 bench-startup     # custom startup-time benchmark (functions/bench-startup)
 zsh-bench         # romkatv/zsh-bench, on PATH via the plugin
 
-# profile what's slow on startup:
-zmodload zsh/zprof; source ~/.zshrc; zprof
+# profile what's slow on startup — starts a fresh shell with ZPROFRC=1, which makes
+# .zshrc load zsh/zprof at the top and print the report at the very end:
+zprofrc
 ```
+
+Profile a *fresh* shell (`zprofrc`), not a re-source. `zmodload zsh/zprof; source ~/.zshrc; zprof` in an already-initialized shell is unreliable: anything cached or guarded on first run (the compdump, `cached-eval` output, the antidote static file) is already warm, so the numbers don't reflect a real startup.
 
 ## Tests
 

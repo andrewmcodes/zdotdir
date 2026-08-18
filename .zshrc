@@ -50,7 +50,16 @@ unset antidote_lib
 zsh_plugins=${ZDOTDIR:-$HOME}/antidote_plugins
 #? `antidote` is a function from the lib above, not a binary — hence $+functions.
 if (($+functions[antidote])) && [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.conf ]]; then
-  antidote bundle <${zsh_plugins}.conf >|${zsh_plugins}.zsh
+  #* Bundle to a temp file and install it only on success. Writing straight to
+  #* ${zsh_plugins}.zsh truncates it up front, so a `bundle` that dies mid-run
+  #* (^C on a slow first-run clone, full disk) leaves a partial loader that is
+  #* now NEWER than the .conf — the -nt test above never fires again and every
+  #* later shell silently starts with no plugins at all.
+  if antidote bundle <${zsh_plugins}.conf >|${zsh_plugins}.zsh.tmp; then
+    mv -f -- ${zsh_plugins}.zsh.tmp ${zsh_plugins}.zsh
+  else
+    rm -f -- ${zsh_plugins}.zsh.tmp
+  fi
 fi
 [[ ! -r ${zsh_plugins}.zsh ]] || source ${zsh_plugins}.zsh
 unset zsh_plugins
@@ -61,7 +70,12 @@ unset zsh_plugins
 path=($path)
 
 #* Hardcoded opt paths instead of `$(brew --prefix <formula>)` — avoids 3 brew forks per startup.
-export PKG_CONFIG_PATH="${HOMEBREW_PREFIX}/bin/pkg-config:${HOMEBREW_PREFIX}/opt/icu4c/lib/pkgconfig:${HOMEBREW_PREFIX}/opt/curl/lib/pkgconfig:${HOMEBREW_PREFIX}/opt/zlib/lib/pkgconfig"
+#* Same fallback as antidote_lib above: HOMEBREW_PREFIX is only exported in
+#* .zshenv's `darwin*` branch, so a bare ${HOMEBREW_PREFIX} exported
+#* `/bin/pkg-config:/opt/icu4c/lib/pkgconfig:…` on anything that isn't macOS.
+brew_prefix=${HOMEBREW_PREFIX:-/opt/homebrew}
+export PKG_CONFIG_PATH="${brew_prefix}/bin/pkg-config:${brew_prefix}/opt/icu4c/lib/pkgconfig:${brew_prefix}/opt/curl/lib/pkgconfig:${brew_prefix}/opt/zlib/lib/pkgconfig"
+unset brew_prefix
 
 #* Guarded like every rc.d/<tool>.zsh does. Note these two stay EAGER on purpose:
 #* `mise activate` output embeds a snapshot of the generating shell's PATH plus

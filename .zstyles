@@ -13,16 +13,31 @@ zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
 # Store clones as owner/repo (e.g. ~/.cache/repos/zsh-users/zsh-autosuggestions).
 zstyle ':antidote:bundle' path-style 'short'
 
+#? Byte-compile the plugin files and the generated static loader, so each `source`
+#? loads a .zwc instead of re-parsing the script. The `:antidote:*` pattern covers
+#? both `:antidote:bundle:<repo>` (per-plugin) and `:antidote:static` (the loader —
+#? which makes antidote emit a self-zrecompiling preamble into antidote_plugins.zsh).
+#* Separate from ~/.cache/zsh/zcompdump.zwc, which ez-compinit compiles itself.
+zstyle ':antidote:*' zcompile 'yes'
+
 # Completions: cache + zcompile the zcompdump (skips insecure-dir checks; ~daily refresh).
-#* After adding new completions, clear the cached dump so they're picked up.
+#? No manual dump-clearing needed any more — rc.d/03-completion.zsh stamps $fpath
+#? beside the dump and forces a rebuild whenever it changes.
 zstyle ':plugin:ez-compinit' 'use-cache' 'yes'
 
-# set list-colors to enable filename colorizing
-zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-zstyle ':fzf-tab:complete:cd:*' fzf-preview 'exa -1 --color=always $realpath'
-zstyle ':fzf-tab:complete:systemctl-*:*' fzf-preview 'SYSTEMD_COLORS=1 systemctl status $word'
+#* No `list-colors` here. It used to be set from ${(s.:.)LS_COLORS}, but LS_COLORS
+#* is never set anywhere in this config — so that line actively set the style to
+#* an EMPTY value rather than being inert. compstyle_zshzoo_setup (the `post:`
+#* hook on belak/zsh-utils) sets real colors on ':completion:*:default' instead.
+#* If richer completion colors are ever wanted, set LS_COLORS statically in
+#* .zshenv — `gdircolors` is installed but costs a fork.
+
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath'
 zstyle ':fzf-tab:complete:tldr:argument-1' fzf-preview 'tldr --color always $word'
 # switch group using `,` and `.`
 zstyle ':fzf-tab:*' switch-group ',' '.'
-# exclude .. and . from completion
-zstyle ':completion:*' special-dirs false
+
+#* No `special-dirs` here either. compstyle_zshzoo_setup runs AFTER .zstyles and
+#* sets `special-dirs ..`, so a value set here is silently overwritten — the old
+#* `special-dirs false` never took effect. To actually exclude `..` from
+#* completion, set it from an rc.d file (which loads after the plugins).

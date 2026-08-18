@@ -10,4 +10,7 @@ typeset -g ZUNIT_PROJECT_ROOT="${ZUNIT_SUPPORT_DIR:h:h}"
 
 # Autoload the functions under test from the real functions/ directory.
 fpath=("$ZUNIT_PROJECT_ROOT/functions" $fpath)
-autoload -Uz calculate_actions_stats funcs
+autoload -Uz calculate_actions_stats funcs cached-eval optdiff
+
+# Fixture executables (tests/_support/bin) that stand in for real tools.
+typeset -g ZUNIT_SUPPORT_BIN="$ZUNIT_SUPPORT_DIR/bin"

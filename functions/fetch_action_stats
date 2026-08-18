@@ -1,4 +1,8 @@
 #!/bin/zsh
+# fetch_action_stats: Print run durations (seconds) for successful GitHub Actions runs.
+#
+# Usage: fetch_action_stats [workflow] [branch] [limit]   # defaults: ci.yml main 10
+# Pipe into `calculate_actions_stats` for avg/median.
 
 main() {
   local workflow=${1:-ci.yml} branch=${2:-main} limit=${3:-10}

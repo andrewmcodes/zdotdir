@@ -1,2 +1,3 @@
 #!/bin/zsh
+# is-macos: Exit 0 on macOS, non-zero elsewhere. Used by antidote's `conditional:`.
 [[ $OSTYPE == *darwin* ]]

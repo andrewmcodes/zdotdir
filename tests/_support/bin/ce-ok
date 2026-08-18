@@ -1,0 +1,3 @@
+#!/bin/zsh
+#? Fixture: prints valid zsh code, exits 0. Used by cached-eval tests.
+print 'ZUNIT_CE_MARKER=sourced'

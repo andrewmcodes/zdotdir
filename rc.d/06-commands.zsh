@@ -11,6 +11,10 @@ function _pg_running_version() {
   local v
   v=$(psql --no-psqlrc -t -c 'show server_version;' postgres) || return 1
   local -a words=(${=v})
+  #* Must fail on empty output too, not just a non-zero psql. Returning 0 with an
+  #* empty version made the callers' `|| return 1` guard pass and then build
+  #* `.../installs/postgres//bin/pg_ctl`, which is not a real path.
+  (( $#words )) || return 1
   print -r -- "${words[1]}"
 }
 
@@ -67,6 +71,15 @@ function pg_stop {
 # Example: pg_switch 13.3
 function pg_switch {
   local version_to_run=$1
+  #* Validate the argument BEFORE stopping anything. Without this, `pg_switch`
+  #* with no argument compared "" against the running version, decided they
+  #* differed, stopped the server, then ran a nonexistent
+  #* `.../installs/postgres//bin/pg_ctl … start` and `mise use -g postgres@` —
+  #* leaving no server running and a bogus global pin.
+  if [[ -z $version_to_run ]]; then
+    print -u2 -- 'usage: pg_switch <version>'
+    return 2
+  fi
   #* Declared, then assigned — see the note in pg_stop.
   local currently_running_version
   currently_running_version=$(_pg_running_version) || return 1

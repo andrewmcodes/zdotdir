@@ -39,7 +39,7 @@ This repo is a modular ZSH setup for macOS powered by Homebrew, Antidote, fzf, z
   - `functions/*`: Standalone commands you'd run directly (e.g., `grecent`, `is-macos`)
 - **Function structure** ([functions/grecent](../functions/grecent)):
   - Start with `#!/bin/zsh` (8 of 9 do; `bench-startup` is the lone `#!/usr/bin/env zsh`). The shebang is decorative — zsh autoloads these, it never execs them
-  - `main() { ... }; main "$@"` is the convention **with exceptions**: 5 of 9 use it; `funcs`, `is-macos`, `os` and `bench-startup` are flat scripts. Use it when there are locals to scope or arguments to validate
+  - `main() { ... }; main "$@"` is the convention **with exceptions**: 4 of 9 use it; `funcs`, `is-macos`, `os` and `bench-startup` are flat scripts, and `cached-eval` uses a private `_cached_eval_main` because `.zshrc` calls it at startup (a `main` wrapper would leak into every shell). Use it when there are locals to scope or arguments to validate
   - The leading comment is what `funcs` prints as the description — always write one
   - Single responsibility principle
 - **Interactive UX**: Prefer fzf-based interfaces with preview windows:

@@ -1,4 +1,4 @@
-Antidote is a Zsh plugin manager built from the ground up with performance in mind. This config uses [antidote](https://antidote.sh) **2.2.1**, installed via Homebrew. (`antidote` is a shell *function* from the sourced lib, not a binary, so `antidote -v` only works inside a shell that has loaded it — `brew list --versions antidote` is the reliable check.)
+Antidote is a Zsh plugin manager built from the ground up with performance in mind. This config uses [antidote](https://antidote.sh) **2.3.0**, installed via Homebrew. (`antidote` is a shell *function* from the sourced lib, not a binary, so `antidote -v` only works inside a shell that has loaded it — `brew list --versions antidote` is the reliable check.)
 
 The antidote developer regularly publishes zsh-bench results in his [dotfiles repo](https://github.com/mattmc3/zdotdir).
 

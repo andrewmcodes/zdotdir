@@ -253,7 +253,8 @@ This document provides a comprehensive list of all available aliases organized b
 | `brewS` | `brew services` | Manage brew services |
 | `brewu` | `brew update` | Update brew |
 | `brewU` | `brew upgrade` | Upgrade packages |
-| `brewUp` | `brew update && brew upgrade && brew cleanup` | Full system update |
+| `brewUp` | `brew update && brew upgrade && brew cleanup && brew link schpet/tap/linear` | Full system update (the relink keeps `linear` on `$PATH`) |
+| `brewUpg` | same as `brewUp` but `brew upgrade --greedy` | Full system update, including auto-updating casks |
 | `brewx` | `brew uninstall` | Uninstall package |
 | `brewX` | `brew uninstall --force` | Force uninstall package |
 

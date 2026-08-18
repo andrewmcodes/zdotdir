@@ -14,7 +14,10 @@ setopt pipefail
 #* An autoloaded function's file body IS the function body, so plain `local` works
 #* here — without it `runs` was left behind in the calling shell.
 local runs=${1:-5}
-local basic_out=/tmp/zsh_startup_basic.txt
+#* $TMPDIR, not a fixed /tmp path: /tmp is world-writable, so on a shared box
+#* another user can pre-create or symlink /tmp/zsh_startup_basic.txt and `tee`
+#* writes through it. $$ also keeps two concurrent runs from clobbering each other.
+local basic_out=${TMPDIR:-/tmp}/zsh_startup_basic.$$.txt
 
 #* `local` cannot scope a function. A nested definition becomes a GLOBAL function
 #* the moment the outer one runs, so these two leaked as well; the `unfunction` at
@@ -45,3 +48,4 @@ _bench_startup_hyperfine() {
 _bench_startup_basic
 _bench_startup_hyperfine
 unfunction _bench_startup_basic _bench_startup_hyperfine
+rm -f -- $basic_out

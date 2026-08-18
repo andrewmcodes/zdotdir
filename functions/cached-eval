@@ -23,8 +23,14 @@
 #* Locals are `_ce_`-prefixed on purpose: this function `source`s third-party code
 #* in its own scope, and an unprefixed `key`/`out`/`tmp` could shadow a parameter
 #* that code expects to read or set.
+#
+#* Deliberately NOT the repo's usual `main() { … }; main "$@"` shape. .zshrc calls
+#* `cached-eval fnox activate zsh` during startup, so a `main` wrapper would leave
+#* a global function named `main` defined in EVERY interactive shell — clobbering
+#* the user's own `main` and making `which main` print this file. Private name +
+#* `unfunction`, which is also what functions/bench-startup does for its helpers.
 
-main() {
+_cached_eval_main() {
   local _ce_dir=${XDG_CACHE_HOME:-$HOME/.cache}/zsh/cached-eval
 
   if [[ ${1-} == --clear ]]; then
@@ -32,15 +38,23 @@ main() {
     [[ -z ${2-} ]] || _ce_pat="*$2*"
     #* ${~...} is required: zsh does NOT glob-expand the result of a parameter
     #* expansion unless you ask it to, so a bare $_ce_pat matched nothing.
+    #* `:#*.tmp` drops the rebuild scratch files: `<key>.<pid>.tmp` belongs to a
+    #* shell that is mid-rebuild (or crashed during one), and deleting it out from
+    #* under a live shell makes its `mv` fail for no reason.
     local -a _ce_doomed=($_ce_dir/${~_ce_pat}(N.))
+    _ce_doomed=(${_ce_doomed:#*.tmp})
     (( $#_ce_doomed )) && rm -f -- $_ce_doomed
     print -- "cached-eval: cleared ${#_ce_doomed} cached file(s)"
     return 0
   fi
 
   if [[ ${1-} == --list ]]; then
+    #? Same reason as --clear: a stale `.tmp` is not a cache entry.
     local _ce_f
-    for _ce_f in $_ce_dir/*(N.om); do print -r -- ${_ce_f:t}; done
+    for _ce_f in $_ce_dir/*(N.om); do
+      [[ ${_ce_f:t} == *.tmp ]] && continue
+      print -r -- ${_ce_f:t}
+    done
     return 0
   fi
 
@@ -98,4 +112,9 @@ main() {
   return 1
 }
 
-main "$@"
+_cached_eval_main "$@"
+#? Capture the status before `unfunction` clobbers $?. `local` works out here: an
+#? autoloaded function's file body IS the function body.
+local _ce_status=$?
+unfunction _cached_eval_main
+return $_ce_status

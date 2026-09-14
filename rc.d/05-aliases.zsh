@@ -1,8 +1,7 @@
-alias "...."="cd ../../"
-alias "..."="cd ../.." # Corrected alias
+alias "...."="cd ../../.."
+alias "..."="cd ../.."
 alias ".."="cd .."
 alias "~"="cd ~"
-alias %= \$= #? Define the % symbol as an alias for the $= symbol
 # New
 # Chezmoi
 alias cz="chezmoi"
@@ -32,7 +31,8 @@ alias brews="brew search"
 alias brewS="brew services"
 alias brewu="brew update"
 alias brewU="brew upgrade"
-alias brewUp="brew update && brew upgrade && brew cleanup"
+alias brewUp="brew update && brew upgrade && brew cleanup && brew link schpet/tap/linear"
+alias brewUpg="brew update && brew upgrade --greedy && brew cleanup && brew link schpet/tap/linear"
 alias brewx="brew uninstall"
 alias brewX="brew uninstall --force"
 # Casks
@@ -45,6 +45,9 @@ alias caskU="brew upgrade --cask"
 alias caskx="brew uninstall --cask"
 alias caskX="brew uninstall --cask --force"
 alias caskz="brew uninstall --cask --zap"
+# Zsh
+#? Profile startup: runs a fresh shell with zsh/zprof loaded (see .zshrc).
+alias zprofrc="ZPROFRC=1 zsh"
 # History
 alias hisT="history | tail"
 alias hisG="history | grep"
@@ -52,7 +55,9 @@ alias hisG="history | grep"
 alias r="rails"
 alias rc="rails console"
 alias rDbc="rails dbconsole"
-alias rT="rails -T | awk '{print $2}' | fzf --preview 'rails {1} --help' | xargs -I {} rails {}"
+#* $2 must be escaped: in a double-quoted alias it expands at DEFINITION time,
+#* leaving `awk '{print }'` — which echoes whole lines instead of the task name.
+alias rT="rails -T | awk '{print \$2}' | fzf --preview 'rails {1} --help' | xargs -I {} rails {}"
 alias rdm="rails db:migrate"
 alias rG="rails generate"
 alias rR="rails routes"
@@ -96,7 +101,10 @@ alias b="bundle"
 alias be="bundle exec"
 alias up="git pull && bundle check || bundle && yarn && rails db:migrate"
 
-alias diff="diff --color"
+#? Compose rather than clobber: this adds a flag to the SAME binary, so preserve any
+#? alias a plugin already set (belak/zsh-utils does exactly this for `ls` and `grep`).
+#? Contrast the eza/bat aliases below, which REPLACE the binary and must clobber.
+alias diff="${aliases[diff]:-diff} --color"
 alias g="git"
 alias ga="git add"
 alias gb="git branch"

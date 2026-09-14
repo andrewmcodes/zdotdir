@@ -1,7 +1,11 @@
 #!/bin/zsh
 #
-# This file is the entry point for your Zsh configuration. It's the first file
-# that is sourced when Zsh starts up, and it's loaded only once.
+# .zprofile - sourced for LOGIN shells only, after .zshenv and before .zshrc.
+#
+#* Not the entry point (that's .zshenv, which every shell reads, scripts included)
+#* and not "loaded once" — a new login shell sources it again. Put something here
+#* only if it must run once per login session; everything else belongs in .zshenv
+#* (all shells) or .zshrc (interactive).
 #
 
 # Added by OrbStack: command-line tools and integration

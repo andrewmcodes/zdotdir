@@ -1,0 +1,3 @@
+#!/bin/zsh
+#? Fixture: exits 0 but prints nothing. Nothing to source, so nothing to cache.
+exit 0

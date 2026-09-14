@@ -1,4 +1,5 @@
 #!/bin/zsh
+# grecent: Pick a recently-committed-to git branch with fzf and check it out.
 
 main() {
   local branches branch

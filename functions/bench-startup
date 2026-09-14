@@ -6,23 +6,37 @@
 # Dependencies:
 #   hyperfine (optional) for statistically robust measurements.
 
-set -euo pipefail
+#* `set -euo pipefail` leaks into the CALLING shell from an autoloaded function.
+#* `emulate -L zsh` scopes options to this function; it implies local_options.
+emulate -L zsh
+setopt pipefail
 
-runs=${1:-5}
+#* An autoloaded function's file body IS the function body, so plain `local` works
+#* here — without it `runs` was left behind in the calling shell.
+local runs=${1:-5}
+#* $TMPDIR, not a fixed /tmp path: /tmp is world-writable, so on a shared box
+#* another user can pre-create or symlink /tmp/zsh_startup_basic.txt and `tee`
+#* writes through it. $$ also keeps two concurrent runs from clobbering each other.
+local basic_out=${TMPDIR:-/tmp}/zsh_startup_basic.$$.txt
 
-measure_basic() {
+#* `local` cannot scope a function. A nested definition becomes a GLOBAL function
+#* the moment the outer one runs, so these two leaked as well; the `unfunction` at
+#* the bottom is what keeps them out of the caller's shell. They take the private
+#* `_`-prefix so the unfunction can never clobber something the user defined.
+_bench_startup_basic() {
   echo "== Basic (time) measurement ($runs runs) =="
-  for i in $(seq 1 $runs); do
+  for i in {1..$runs}; do
     /usr/bin/env time -p zsh -i -c exit 2>&1 | awk -v i=$i '/^real/ {print "run " i ": " $2 "s"}'
-  done | tee /tmp/zsh_startup_basic.txt
+  done | tee $basic_out
   echo "-- summary --"
-  awk '{print $2}' /tmp/zsh_startup_basic.txt | sed 's/s$//' | awk '
+  #? Lines are `run <i>: <secs>s` — the time is $3, not $2 (which is the run index).
+  awk '{print $3}' $basic_out | sed 's/s$//' | awk '
     NR==1 {min=max=$1}
     {sum+=$1; if($1<min) min=$1; if($1>max) max=$1}
     END {printf "min=%.3fs avg=%.3fs max=%.3fs (n=%d)\n", min, sum/NR, max, NR}'
 }
 
-measure_hyperfine() {
+_bench_startup_hyperfine() {
   if command -v hyperfine >/dev/null 2>&1; then
     echo "== Hyperfine measurement =="
     hyperfine -w 2 -r $runs 'zsh -i -c exit'
@@ -31,5 +45,7 @@ measure_hyperfine() {
   fi
 }
 
-measure_basic
-measure_hyperfine
+_bench_startup_basic
+_bench_startup_hyperfine
+unfunction _bench_startup_basic _bench_startup_hyperfine
+rm -f -- $basic_out

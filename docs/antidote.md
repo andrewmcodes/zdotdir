@@ -1,4 +1,4 @@
-Antidote is a Zsh plugin manager built from the ground up with performance in mind. This config uses [antidote](https://antidote.sh) **2.1.0**, installed via Homebrew.
+Antidote is a Zsh plugin manager built from the ground up with performance in mind. This config uses [antidote](https://antidote.sh) **2.3.0**, installed via Homebrew. (`antidote` is a shell *function* from the sourced lib, not a binary, so `antidote -v` only works inside a shell that has loaded it — `brew list --versions antidote` is the reliable check.)
 
 The antidote developer regularly publishes zsh-bench results in his [dotfiles repo](https://github.com/mattmc3/zdotdir).
 
@@ -26,15 +26,25 @@ The simplest way to use antidote is to source it and call `antidote load`. For a
 [[ ! -f ${ZDOTDIR:-$HOME}/.zstyles ]] || source ${ZDOTDIR:-$HOME}/.zstyles
 
 # Source antidote (keeps the `antidote` command available for list/update/install).
-source ${HOMEBREW_PREFIX}/opt/antidote/share/antidote/antidote.zsh
+#* Quoted with a fallback: HOMEBREW_PREFIX is only exported in .zshenv's darwin
+#* branch, so a bare ${HOMEBREW_PREFIX} resolved to /opt/antidote/... elsewhere.
+antidote_lib="${HOMEBREW_PREFIX:-/opt/homebrew}/opt/antidote/share/antidote/antidote.zsh"
+[[ ! -r "$antidote_lib" ]] || source "$antidote_lib"
+unset antidote_lib
 
 # Regenerate the static file only when the .conf changed, then source it directly.
 zsh_plugins=${ZDOTDIR:-$HOME}/antidote_plugins
-if [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.conf ]]; then
+#? `antidote` is a function from the lib above, not a binary — hence $+functions.
+if (($+functions[antidote])) && [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.conf ]]; then
   antidote bundle <${zsh_plugins}.conf >|${zsh_plugins}.zsh
 fi
-source ${zsh_plugins}.zsh
+[[ ! -r ${zsh_plugins}.zsh ]] || source ${zsh_plugins}.zsh
 unset zsh_plugins
+
+#* The generated loader emits `export PATH="…/zsh-bench:$PATH"`, and `typeset -gU
+#* path` does NOT dedupe a scalar PATH= assignment — so zsh-bench accumulated a
+#* second entry in nested shells. Reassigning the array re-applies uniqueness.
+path=($path)
 ```
 
 ## .zstyles
@@ -50,9 +60,18 @@ zstyle ':antidote:bundle' file ${ZDOTDIR:-~}/antidote_plugins.conf
 
 # Store clones as owner/repo instead of the escaped antibody-style path.
 zstyle ':antidote:bundle' path-style 'short'
+
+# Byte-compile the plugin files AND the generated static loader.
+zstyle ':antidote:*' zcompile 'yes'
 ```
 
 > `path-style 'short'` is the modern form; `use-friendly-names 'yes'` is a legacy alias for it (see [Path style](#path-style)).
+
+### zcompile
+
+`zstyle ':antidote:*' zcompile 'yes'` makes each `source` read a byte-compiled `.zwc` instead of re-parsing the script. The `:antidote:*` pattern is deliberately broad — it covers both `:antidote:bundle:<repo>` (the per-plugin files) and `:antidote:static` (the generated loader). Setting it for the static file also makes antidote emit a self-zrecompiling preamble into `antidote_plugins.zsh`, so the `.zwc` is refreshed whenever the loader is regenerated.
+
+This is separate from `~/.cache/zsh/zcompdump.zwc`, which the `mattmc3/ez-compinit` plugin compiles itself.
 
 ## Ultra high performance install
 
@@ -97,7 +116,7 @@ A plugins file is any text file with one plugin per line. This config's `antidot
 mattmc3/ez-compinit
 zsh-users/zsh-completions kind:fpath path:src
 aloxaf/fzf-tab
-MichaelAquilina/zsh-you-should-use
+MichaelAquilina/zsh-you-should-use kind:defer
 
 # Completion styles — autoload the functions, then run setup afterward
 belak/zsh-utils path:completion/functions kind:autoload post:compstyle_zshzoo_setup
@@ -112,11 +131,11 @@ zshzoo/macos conditional:is-macos
 # Put a tool on $PATH rather than sourcing it
 romkatv/zsh-bench kind:path
 
-# Pull a single plugin out of a framework
-ohmyzsh/ohmyzsh path:plugins/extract
+# Pull a single plugin out of a framework (deferred — `extract` is interactive-only)
+ohmyzsh/ohmyzsh path:plugins/extract kind:defer
 
 # Fish-like features
-zdharma-continuum/fast-syntax-highlighting kind:defer  # defer slow syntax highlighting
+zdharma-continuum/fast-syntax-highlighting kind:defer pin:cf318e06a9b7c9f2219d78f41b46fa6e06011fd9
 zsh-users/zsh-autosuggestions
 ```
 
@@ -126,7 +145,8 @@ Things to notice:
 
 - **Basic bundles** are `owner/repo`. Bash plugins generally work too.
 - **Empty lines and `#` comments are skipped.**
-- **Annotations** (`kind:`, `path:`, `conditional:`, `post:`, …) tune how each bundle is treated — see below.
+- **Annotations** (`kind:`, `path:`, `conditional:`, `post:`, `pin:`, …) tune how each bundle is treated — see below.
+- **There is no shell expansion in this file.** `antidote bundle` reads it through a plain `<` redirect, so a `$VAR` or `~` in an annotation value is taken literally. Everything here must be spelled out.
 
 If you followed the recommended install, your plugins are already loaded once `.zshrc` sources the static file.
 
@@ -291,11 +311,18 @@ $ antidote bundle owner/repo autoload:functions
 
 ## Pin
 
-`pin:<sha>` locks a bundle to a specific commit. The SHA must be the full 40-character commit hash. Pinned bundles are skipped by `antidote update`.
+`pin:<sha>` locks a bundle to a specific commit. Pinned bundles are skipped by `antidote update`, so the pin is what turns "a third-party update runs new code at my next shell start" into a deliberate, reviewable edit.
 
 ```text
 $ antidote bundle zsh-users/zsh-autosuggestions pin:85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
 ```
+
+Two hard constraints, both proven the hard way:
+
+1. **The SHA must be a literal.** `antidote bundle` reads the plugins file via a plain `<` redirect, so there is no shell expansion at all — `pin:$MY_SHA` is passed through verbatim and fails.
+2. **It must be exactly 40 characters.** A short SHA (`pin:cf318e06`) is rejected; use the full hash.
+
+This config pins `zdharma-continuum/fast-syntax-highlighting` — zdharma-continuum is a community fork of an abandoned org, i.e. exactly the account-takeover profile a pin exists for. To bump it, read the upstream diff, then edit the SHA in `antidote_plugins.conf`.
 
 This is the same mechanism antidote uses for [snapshots](#snapshot).
 
@@ -381,10 +408,12 @@ List the bundles cloned to your antidote home folder (format is `<path>` then `<
 ```text
 $ antidote list
 /Users/andrew.mason/.cache/repos/aloxaf/fzf-tab	https://github.com/aloxaf/fzf-tab
-/Users/andrew.mason/.cache/repos/atuinsh/atuin	https://github.com/atuinsh/atuin
 /Users/andrew.mason/.cache/repos/belak/zsh-utils	https://github.com/belak/zsh-utils
+/Users/andrew.mason/.cache/repos/mattmc3/ez-compinit	https://github.com/mattmc3/ez-compinit
 # ...
 ```
+
+`antidote list` reports what is *cloned*, which is not necessarily what is *loaded* — clones outlive the bundle lines that created them. Anything here with no corresponding line in `antidote_plugins.conf` (and no `zsh-defer`-style indirect reference) is dead weight; `antidote purge owner/repo` removes it. `romkatv/zsh-defer` is the one clone with no bundle line that must stay — `kind:defer` pulls it in.
 
 ## Load
 

@@ -1,0 +1,21 @@
+#!/bin/zsh
+#
+# Fixture driver for tests/optdiff.zunit. Sourced inside a pristine
+# `zsh -df -o interactive` to put it into a known option state before running
+# optdiff, so both sides of optdiff's subtraction are deterministic.
+#
+# Usage: source <this file> <project-root> [optdiff args...]
+#
+#   autocd, nobeep, nonomatch  - set here AND by the fixture's rc.d files
+#   histverify, promptsubst    - set here and by nobody else, i.e. the "plugin"
+#                                case (the fixture only names them in comments)
+
+fpath=("$1/functions" $fpath)
+autoload -Uz optdiff
+
+ZDOTDIR=${0:A:h}
+
+setopt auto_cd no_beep hist_verify prompt_subst
+unsetopt nomatch
+
+optdiff "${@:2}"

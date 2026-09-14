@@ -15,5 +15,11 @@ hash -d applications=/Applications
 hash -d archive=$HOME/Documents/4_Archive
 hash -d documents=$HOME/Documents
 
+# Remember the directory this shell started in, so `iwd` gets you back after wandering.
+#? Deliberately NOT exported: each shell should record its own start dir, otherwise a
+#? nested shell would inherit its parent's. Single quotes so $IWD expands at use time.
+IWD=$PWD
+alias iwd='cd $IWD'
+
 # `hash -d <name>=<path>` makes ~<name> a shortcut for <path>.
 # You can use this ~name anywhere you would specify a dir, not just with `cd`!

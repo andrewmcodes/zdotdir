@@ -1,0 +1,120 @@
+#!/bin/zsh
+# cached-eval: Source a command's zsh output, caching it to disk so later shells
+#              skip the subprocess.
+#
+# Usage:
+#   cached-eval starship init zsh    # instead of: eval "$(starship init zsh)"
+#   cached-eval --list               # show what's cached, most recently built first
+#   cached-eval --clear              # drop every cached file
+#   cached-eval --clear starship     # drop only caches matching *starship*
+#
+# Behaviour worth knowing:
+#   - Keyed on the FULL command line, so `tool init zsh` and `tool init bash`
+#     cannot collide.
+#   - Rebuilds through a temp file and only installs it if the command exited 0
+#     AND produced output, so a broken or half-installed tool can never leave a
+#     poisoned cache behind.
+#   - Invalidated when the tool's binary is newer than the cache (picks up a
+#     `brew upgrade` automatically) and by $ZSH_CACHED_EVAL_TTL seconds as a
+#     backstop (default 604800 = 7 days).
+#   - Returns 1 silently when the command isn't installed, so callers can keep
+#     the same idiom as the rest of rc.d: `cached-eval foo init zsh || return 1`.
+#
+#* Locals are `_ce_`-prefixed on purpose: this function `source`s third-party code
+#* in its own scope, and an unprefixed `key`/`out`/`tmp` could shadow a parameter
+#* that code expects to read or set.
+#
+#* Deliberately NOT the repo's usual `main() { … }; main "$@"` shape. .zshrc calls
+#* `cached-eval fnox activate zsh` during startup, so a `main` wrapper would leave
+#* a global function named `main` defined in EVERY interactive shell — clobbering
+#* the user's own `main` and making `which main` print this file. Private name +
+#* `unfunction`, which is also what functions/bench-startup does for its helpers.
+
+_cached_eval_main() {
+  local _ce_dir=${XDG_CACHE_HOME:-$HOME/.cache}/zsh/cached-eval
+
+  if [[ ${1-} == --clear ]]; then
+    local _ce_pat='*'
+    [[ -z ${2-} ]] || _ce_pat="*$2*"
+    #* ${~...} is required: zsh does NOT glob-expand the result of a parameter
+    #* expansion unless you ask it to, so a bare $_ce_pat matched nothing.
+    #* `:#*.tmp` drops the rebuild scratch files: `<key>.<pid>.tmp` belongs to a
+    #* shell that is mid-rebuild (or crashed during one), and deleting it out from
+    #* under a live shell makes its `mv` fail for no reason.
+    local -a _ce_doomed=($_ce_dir/${~_ce_pat}(N.))
+    _ce_doomed=(${_ce_doomed:#*.tmp})
+    (( $#_ce_doomed )) && rm -f -- $_ce_doomed
+    print -- "cached-eval: cleared ${#_ce_doomed} cached file(s)"
+    return 0
+  fi
+
+  if [[ ${1-} == --list ]]; then
+    #? Same reason as --clear: a stale `.tmp` is not a cache entry.
+    local _ce_f
+    for _ce_f in $_ce_dir/*(N.om); do
+      [[ ${_ce_f:t} == *.tmp ]] && continue
+      print -r -- ${_ce_f:t}
+    done
+    return 0
+  fi
+
+  if (( ! $# )); then
+    print -u2 -- 'cached-eval: usage: cached-eval <command> [args...]'
+    return 2
+  fi
+
+  #? Silent, like every rc.d/<tool>.zsh guard — a missing tool is not an error.
+  #? $commands only holds bare names, so a path-ish argument is checked with -x.
+  local _ce_bin
+  if [[ $1 == */* ]]; then
+    [[ -x $1 ]] || return 1
+    _ce_bin=$1
+  else
+    (($+commands[$1])) || return 1
+    _ce_bin=$commands[$1]
+  fi
+
+  #? Sanitised full command line: filesystem-safe and still readable in the dir.
+  local _ce_key=${${(j: :)@}//[^A-Za-z0-9]/-}
+  local _ce_cache=$_ce_dir/$_ce_key
+  local _ce_ttl=${ZSH_CACHED_EVAL_TTL:-604800}
+
+  #? (N.ms-$ttl): exists, regular file, modified within $ttl seconds. Paired with
+  #? -nt so a tool upgrade invalidates the cache even inside the TTL window.
+  local -a _ce_fresh=($_ce_cache(N.ms-$_ce_ttl))
+  if (( $#_ce_fresh )) && [[ $_ce_cache -nt $_ce_bin ]]; then
+    source $_ce_cache
+    return 0
+  fi
+
+  mkdir -p -- $_ce_dir 2>/dev/null
+  if [[ ! -d $_ce_dir ]]; then
+    #* Unwritable cache dir must never cost us the integration — run uncached.
+    local _ce_out
+    _ce_out=$("$@" 2>/dev/null) || return 1
+    [[ -n $_ce_out ]] || return 1
+    eval "$_ce_out"
+    return 0
+  fi
+
+  local _ce_tmp=$_ce_cache.$$.tmp
+  #* `>|` because this config sets NO_CLOBBER; a bare `>` would fail here.
+  if "$@" >| $_ce_tmp 2>/dev/null && [[ -s $_ce_tmp ]]; then
+    #? Source what we just generated before installing it, so a failed `mv`
+    #? still leaves this shell working.
+    source $_ce_tmp
+    mv -f -- $_ce_tmp $_ce_cache 2>/dev/null || rm -f -- $_ce_tmp
+    return 0
+  fi
+
+  #* Command failed or printed nothing: leave NO cache file behind.
+  rm -f -- $_ce_tmp
+  return 1
+}
+
+_cached_eval_main "$@"
+#? Capture the status before `unfunction` clobbers $?. `local` works out here: an
+#? autoloaded function's file body IS the function body.
+local _ce_status=$?
+unfunction _cached_eval_main
+return $_ce_status

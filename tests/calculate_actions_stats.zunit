@@ -23,3 +23,31 @@
   assert "${lines[1]}" same_as 'avg=1.5'
   assert "${lines[2]}" same_as 'median=1.5'
 }
+
+#* The three cases above are all pre-sorted, which is exactly why the median bug
+#* survived. `fetch_action_stats` emits reverse-chronological order, so the real
+#* pipeline never feeds this function sorted input — these cases cover that.
+
+@test 'computes median for an UNSORTED odd-length series' {
+  run calculate_actions_stats <<< $'5\n1\n3'
+
+  assert $state equals 0
+  assert "${lines[1]}" same_as 'avg=3.0'
+  assert "${lines[2]}" same_as 'median=3.0'
+}
+
+@test 'computes median for an UNSORTED even-length series' {
+  run calculate_actions_stats <<< $'100\n3\n1\n2'
+
+  assert $state equals 0
+  assert "${lines[1]}" same_as 'avg=26.5'
+  assert "${lines[2]}" same_as 'median=2.5'
+}
+
+@test 'computes median for a longer unsorted series' {
+  run calculate_actions_stats <<< $'7\n3\n9\n1\n5\n2\n8'
+
+  assert $state equals 0
+  assert "${lines[1]}" same_as 'avg=5.0'
+  assert "${lines[2]}" same_as 'median=5.0'
+}

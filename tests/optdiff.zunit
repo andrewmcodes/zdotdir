@@ -1,0 +1,96 @@
+#!/usr/bin/env zunit
+
+# `optdiff` reports the running shell's own options, so testing it means
+# controlling that shell. Every test drives it inside a pristine
+# `zsh -df -o interactive` subshell via tests/_support/optdiff-fixture/driver,
+# which sets a known handful of options and points $ZDOTDIR at the fixture —
+# making both sides of optdiff's subtraction deterministic:
+#
+#   autocd, nobeep, nonomatch  - set by the fixture's rc.d files
+#   histverify, promptsubst    - set by nobody, i.e. the "plugin" case
+#
+#* zunit runs each test body in its own function, so a helper defined at the top
+#* of this file would not be visible inside one — hence the fixture driver.
+
+@test 'reports exactly the options that differ from a pristine shell' {
+  run zsh -df -o interactive -c \
+    "source ${(q)ZUNIT_SUPPORT_DIR}/optdiff-fixture/driver ${(q)ZUNIT_PROJECT_ROOT} --raw"
+
+  assert $state equals 0
+  assert "${#lines}" equals 5
+  assert "${lines[1]}" same_as 'autocd'
+  assert "${lines[2]}" same_as 'histverify'
+  assert "${lines[3]}" same_as 'nobeep'
+  assert "${lines[4]}" same_as 'nonomatch'
+  assert "${lines[5]}" same_as 'promptsubst'
+}
+
+@test 'does not measure its own scratch options' {
+  #? optdiff sets extended_glob for its own use, so it must capture the caller's
+  #? options before doing so, or it would report extendedglob on every shell.
+  run zsh -df -o interactive -c \
+    "fpath=(${(q)ZUNIT_PROJECT_ROOT}/functions \$fpath); autoload -Uz optdiff; optdiff --raw"
+
+  assert $state equals 0
+  assert "$output" is_empty
+}
+
+@test 'folds every spelling of an option onto the file that sets it' {
+  run zsh -df -o interactive -c \
+    "source ${(q)ZUNIT_SUPPORT_DIR}/optdiff-fixture/driver ${(q)ZUNIT_PROJECT_ROOT}"
+
+  assert $state equals 0
+  #? `setopt no_beep` describes the same option as the `nobeep` setopt reports.
+  assert "$output" matches 'nobeep +01-fixture\.zsh'
+  #? nomatch is one of the few options genuinely named with a `no` prefix, so
+  #? `unsetopt nomatch` still has to match the `nonomatch` setopt reports.
+  assert "$output" matches 'nonomatch +01-fixture\.zsh'
+}
+
+@test 'lists every file that sets the same option' {
+  run zsh -df -o interactive -c \
+    "source ${(q)ZUNIT_SUPPORT_DIR}/optdiff-fixture/driver ${(q)ZUNIT_PROJECT_ROOT}"
+
+  assert $state equals 0
+  assert "$output" matches 'autocd +01-fixture\.zsh, 02-fixture\.zsh'
+}
+
+@test 'ignores commented-out setopts and trailing-comment words' {
+  run zsh -df -o interactive -c \
+    "source ${(q)ZUNIT_SUPPORT_DIR}/optdiff-fixture/driver ${(q)ZUNIT_PROJECT_ROOT}"
+
+  assert $state equals 0
+  #? The fixture names hist_verify only in a commented-out line, and promptsubst
+  #? only in a trailing comment. Neither counts as setting the option.
+  assert "$output" matches 'histverify +\(plugin'
+  assert "$output" matches 'promptsubst +\(plugin'
+}
+
+@test '--plugins shows only the unattributed options' {
+  run zsh -df -o interactive -c \
+    "source ${(q)ZUNIT_SUPPORT_DIR}/optdiff-fixture/driver ${(q)ZUNIT_PROJECT_ROOT} --plugins"
+
+  assert $state equals 0
+  assert "$output" contains 'histverify'
+  assert "$output" contains 'promptsubst'
+  assert "$output" does_not_contain 'autocd'
+  assert "$output" does_not_contain 'nonomatch'
+  assert "$output" contains '2 of 5 changed option(s)'
+}
+
+@test 'says so when nothing differs from a pristine shell' {
+  run zsh -df -o interactive -c \
+    "fpath=(${(q)ZUNIT_PROJECT_ROOT}/functions \$fpath); autoload -Uz optdiff; optdiff"
+
+  assert $state equals 0
+  assert "$output" contains 'no options differ'
+}
+
+@test 'rejects an unknown option' {
+  run zsh -df -o interactive -c \
+    "source ${(q)ZUNIT_SUPPORT_DIR}/optdiff-fixture/driver ${(q)ZUNIT_PROJECT_ROOT} --bogus"
+
+  assert $state equals 2
+  assert "$output" contains 'unknown option: --bogus'
+  assert "$output" contains 'usage: optdiff'
+}

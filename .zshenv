@@ -50,7 +50,9 @@ export VISUAL="code-insiders --wait"
 export EDITOR="nvim"
 export MANPAGER="less -X"
 # FZF
-export FZF_DEFAULT_OPTS='--color=fg:#f8f8f2,bg:#282a36,hl:#bd93f9 --color=fg+:#f8f8f2,bg+:#44475a,hl+:#bd93f9 --color=info:#ffb86c,prompt:#50fa7b,pointer:#ff79c6 --color=marker:#ff79c6,spinner:#ffb86c,header:#6272a4'
+#* One palette only. This used to assign a Dracula palette here and then append
+#* the grey one below, producing FIVE --color= flags; since the grey palette sets
+#* every key the Dracula flags set, all four of those were dead weight.
 export FZF_DEFAULT_COMMAND="rg --no-messages --files --no-ignore --hidden --follow --glob '!.git/*'"
 typeset -a _fzf_colors=(
   fg:#EDEEF0
@@ -74,30 +76,50 @@ typeset -a _fzf_opts=(
   --history="$XDG_DATA_HOME/fzf/history.log"
   --no-separator
   --layout=reverse
-  --inline-info
+  --info=inline
   "--color=${(j:,:)_fzf_colors}"
 )
 
-# Merge with any existing options, preserving order
+#? Merge with any options inherited from the environment, preserving order.
+#* .zshenv runs for EVERY zsh, so a nested shell — or the `exec zsh` reload this
+#* config recommends — re-reads an FZF_DEFAULT_OPTS that already contains our
+#* words and would otherwise append a second copy, growing the exported variable
+#* by ~315 bytes per generation. Hence appending only the words not already there.
+#* Deliberately NOT `typeset -aU`: uniquifying the whole array also collapses a
+#* legitimately REPEATED inherited word, and repeating a flag is normal in fzf.
+#* An inherited `--bind a:x --bind b:y` became `--bind a:x b:y`, and every later
+#* fzf call in that shell died with "unknown option: b:y".
 typeset -a _fzf_all=()
 if [[ -n "$FZF_DEFAULT_OPTS" ]]; then
   _fzf_all+=(${(z)FZF_DEFAULT_OPTS})
 fi
-_fzf_all+=("${_fzf_opts[@]}")
+#? (Ie) is an exact-match index lookup: 0 when the word isn't in the array yet.
+for _fzf_o in "${_fzf_opts[@]}"; do
+  (( ${_fzf_all[(Ie)$_fzf_o]} )) || _fzf_all+=("$_fzf_o")
+done
 
 export FZF_DEFAULT_OPTS="${(j: :)_fzf_all}"
+unset _fzf_colors _fzf_opts _fzf_all _fzf_o
 # Zoxide
 export _ZO_DATA_DIR="$XDG_CACHE_HOME/zoxide"
 export _ZO_FZF_OPTS="--no-sort --keep-right --height=50% --info=inline --layout=reverse --exit-0 --select-1 --bind=ctrl-z:ignore --preview='\command eza --long --all {2..}' --preview-window=right"
 
 # Plugins
-export ZSH_HIGHLIGHT_HIGHLIGHTERS=(main brackets cursor root line)
+#? ZSH_HIGHLIGHT_HIGHLIGHTERS is not set here: it's read by zsh-syntax-highlighting,
+#? but this config uses zdharma-continuum/fast-syntax-highlighting, which ignores it.
 export ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e4e4e"
 #* Skip re-binding widgets on every precmd (perf win); don't suggest on large pastes.
 export ZSH_AUTOSUGGEST_MANUAL_REBIND=1
 export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 # FNOX
-export FNOX_AGE_KEY=$(cat ~/.config/fnox/age.txt | grep "AGE-SECRET-KEY")
+#* Deliberately no FNOX_AGE_KEY here. fnox's age provider already defaults its
+#* identity to <config dir>/age.txt — i.e. $XDG_CONFIG_HOME/fnox/age.txt, where
+#* the key already lives — so exporting the raw age secret into every shell and
+#* every child process bought nothing. Verified: with FNOX_AGE_KEY unset, `fnox
+#* get` succeeds in all four repos that carry a fnox.toml, none of which
+#* override `key_file`. Don't re-add it; use the age provider's `key_file` field
+#* if the path ever needs to move (FNOX_AGE_KEY_FILE/age_key_file are the same
+#* option and fnox marks it deprecated).
 # Obsidian
 export OBSIDIAN_VAULT_PATH="$HOME/git/andrewmcodes/digital-brain"
 export OBSIDIAN_VAULT_NAME="digital-brain"

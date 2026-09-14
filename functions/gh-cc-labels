@@ -1,0 +1,41 @@
+#!/bin/zsh
+# gh-cc-labels: Delete all labels in a GitHub repo and recreate the Conventional Commits set.
+
+main() {
+  (($+commands[gh])) || { print -u2 "gh-cc-labels: gh not found"; return 1; }
+
+  local repo
+  repo=$(gh repo view --json nameWithOwner -q .nameWithOwner) || return 1
+
+  print -n "Delete ALL labels in $repo and replace with Conventional Commits labels? [y/N] "
+  local reply
+  read -r reply
+  [[ $reply == [yY] ]] || { print "Aborted."; return 1; }
+
+  local name
+  gh label list --limit 200 --json name -q '.[].name' | while IFS= read -r name; do
+    gh label delete "$name" --yes
+  done
+
+  local -A labels=(
+    feat     'a2eeef:A new feature'
+    fix      'd73a4a:A bug fix'
+    docs     '0075ca:Documentation only changes'
+    style    'fbca04:Formatting, white-space, no code change'
+    refactor 'cfd3d7:Neither fixes a bug nor adds a feature'
+    perf     'c5def5:A change that improves performance'
+    test     'bfdadc:Adding or correcting tests'
+    build    'e4e669:Build system or external dependencies'
+    ci       'ededed:CI configuration and scripts'
+    chore    'fef2c0:Other changes that do not modify src or tests'
+    revert   'b60205:Reverts a previous commit'
+  )
+
+  local type spec
+  for type in ${(k)labels}; do
+    spec=${labels[$type]}
+    gh label create "$type" --color "${spec%%:*}" --description "${spec#*:}" --force
+  done
+}
+
+main "$@"

@@ -182,6 +182,7 @@ Run **`funcs`** to discover them at any time — it lists only your own commands
 | `optdiff` | Show which shell options this config changes from a pristine zsh, and which file set each (`--plugins`, `--raw`) |
 | `os` | Start the Overmind process manager with the appropriate Procfile |
 | `grecent` | Interactively check out a recent git branch via fzf |
+| `gh-cc-labels` | Delete all labels in a GitHub repo and recreate the Conventional Commits set |
 | `is-macos` | Return success when running on macOS |
 | `fetch_action_stats` | Fetch GitHub Actions run durations for a workflow |
 | `calculate_actions_stats` | Compute avg/median from piped `fetch_action_stats` output |

@@ -35,7 +35,7 @@ setopt EXTENDED_GLOB         # Extended globbing patterns for #, ~, and ^
 setopt brace_ccl             # Allow brace character class list expansion
 WORDCHARS=${WORDCHARS//[\/]/}  # Remove path separator from WORDCHARS
 
-#* Moved here from 01-hist.zsh, where it was hidden among the history settings.
+#* Moved here from 02-history.zsh, where it was hidden among the history settings.
 #* This is a GLOBAL globbing change, not a history one: an unmatched glob is
 #* passed through to the command verbatim instead of erroring, so a typo'd
 #* pattern reaches the command silently. Kept for now because `unsetopt nomatch`

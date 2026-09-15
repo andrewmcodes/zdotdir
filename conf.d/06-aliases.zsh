@@ -46,7 +46,7 @@ alias caskx="brew uninstall --cask"
 alias caskX="brew uninstall --cask --force"
 alias caskz="brew uninstall --cask --zap"
 # Zsh
-#? Profile startup: runs a fresh shell with zsh/zprof loaded (see .zshrc).
+##? zprofrc - Profile startup: run a fresh shell with zsh/zprof loaded (see .zshrc).
 alias zprofrc="ZPROFRC=1 zsh"
 # History
 alias hisT="history | tail"

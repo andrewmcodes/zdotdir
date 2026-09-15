@@ -2,6 +2,13 @@
 #
 # .zshrc - Zsh file loaded on interactive shell sessions.
 #
+#? This file is an orchestrator only. Real configuration lives in:
+#?   lib/*.zsh     - bootstrap steps sourced explicitly, in the order below
+#?   conf.d/*.zsh  - config snippets sourced alphabetically by lib/confd.zsh
+#?   functions/*   - one autoloaded command per file
+#? $path, $cdpath and every exported variable live in .zprofile, which .zshenv
+#? sources for non-login shells so scripts see the same environment.
+#
 
 #? Opt-in startup profiling: `zprofrc` (alias) starts a shell with ZPROFRC=1, which
 #? loads zsh/zprof here and dumps the report at the very end of this file. Profiling
@@ -9,104 +16,30 @@
 #? already-initialized shell double-counts anything guarded/cached on first run.
 [[ "$ZPROFRC" -ne 1 ]] || zmodload zsh/zprof
 
-# Lazy-load (autoload) Zsh function files from a directory.
-
-# Ensure path arrays do not contain duplicates.
-typeset -gU path fpath
-
-# Set the list of directories that zsh searches for commands.
-path=(
-  /opt/{homebrew,local}/{,s}bin(N)
-  $HOME/{,s}bin(N)
-  $HOME/.local/{,s}bin(N)
-  /usr/local/{,s}bin(N)
-  $path
-)
-
-ZFUNCDIR=${ZDOTDIR:-$HOME}/functions
-#? completions/ holds hand-written `_name` completion files. (-/FN): only if it's a
-#? directory, nullglob so a missing dir vanishes silently instead of erroring.
-fpath=($ZFUNCDIR ${ZDOTDIR:-$HOME}/completions(-/FN) $fpath)
-#* (N) matters: without nullglob an empty functions/ aborts this whole rc file with
-#* "no matches found". The count guard matters too — bare `autoload -Uz` with no
-#* arguments prints the autoload list instead of doing nothing.
-zfuncs=($ZFUNCDIR/*(.N:t))
-(( $#zfuncs )) && autoload -Uz $zfuncs
-unset zfuncs
-
 # Set any zstyles you might use for configuration.
-[[ ! -f ${ZDOTDIR:-$HOME}/.zstyles ]] || source ${ZDOTDIR:-$HOME}/.zstyles
+[[ ! -r ${ZDOTDIR:-$HOME}/.zstyles ]] || source ${ZDOTDIR:-$HOME}/.zstyles
 
-# Antidote: source the lib (cheap, keeps the `antidote` command available), then
-# source the static plugin file directly — skipping `antidote load`'s per-startup
-# freshness machinery (~27ms). Regenerate only when the .conf is newer.
-#* Quoted, with a fallback and a readability guard: HOMEBREW_PREFIX is only
-#* exported inside .zshenv's `darwin*` branch, so the bare `${HOMEBREW_PREFIX}`
-#* form resolved to /opt/antidote/... on anything that isn't macOS.
-antidote_lib="${HOMEBREW_PREFIX:-/opt/homebrew}/opt/antidote/share/antidote/antidote.zsh"
-[[ ! -r "$antidote_lib" ]] || source "$antidote_lib"
-unset antidote_lib
+# Autoload this config's own commands, and put hand-written completions on $fpath.
+#* The bare `fpath=` line is the bootstrap: autoload-dir is itself an autoloaded
+#* function, so its own directory has to be on $fpath before it can be called.
+#* `typeset -gUa fpath` (set in .zprofile) collapses the duplicate entry.
+ZFUNCDIR=${ZDOTDIR:-$HOME}/functions
+fpath=($ZFUNCDIR $fpath)
+autoload -Uz autoload-dir
+autoload-dir ${ZDOTDIR:-$HOME}/completions $ZFUNCDIR
 
-zsh_plugins=${ZDOTDIR:-$HOME}/antidote_plugins
-#? `antidote` is a function from the lib above, not a binary — hence $+functions.
-if (($+functions[antidote])) && [[ ! ${zsh_plugins}.zsh -nt ${zsh_plugins}.conf ]]; then
-  #* Bundle to a temp file and install it only on success. Writing straight to
-  #* ${zsh_plugins}.zsh truncates it up front, so a `bundle` that dies mid-run
-  #* (^C on a slow first-run clone, full disk) leaves a partial loader that is
-  #* now NEWER than the .conf — the -nt test above never fires again and every
-  #* later shell silently starts with no plugins at all.
-  if antidote bundle <${zsh_plugins}.conf >|${zsh_plugins}.zsh.tmp; then
-    mv -f -- ${zsh_plugins}.zsh.tmp ${zsh_plugins}.zsh
-  else
-    rm -f -- ${zsh_plugins}.zsh.tmp
-  fi
-fi
-[[ ! -r ${zsh_plugins}.zsh ]] || source ${zsh_plugins}.zsh
-unset zsh_plugins
+# Load plugins, then everything in conf.d.
+source ${ZDOTDIR:-$HOME}/lib/antidote.zsh
+source ${ZDOTDIR:-$HOME}/lib/confd.zsh
 
-#* The generated loader does `export PATH="...zsh-bench:$PATH"`, and `typeset -gU
-#* path` does NOT dedupe a scalar PATH= assignment — so zsh-bench accumulated a
-#* second entry in nested shells. Reassigning the array re-applies uniqueness.
-path=($path)
-
-#* Hardcoded opt paths instead of `$(brew --prefix <formula>)` — avoids 3 brew forks per startup.
-#* Same fallback as antidote_lib above: HOMEBREW_PREFIX is only exported in
-#* .zshenv's `darwin*` branch, so a bare ${HOMEBREW_PREFIX} exported
-#* `/bin/pkg-config:/opt/icu4c/lib/pkgconfig:…` on anything that isn't macOS.
-brew_prefix=${HOMEBREW_PREFIX:-/opt/homebrew}
-export PKG_CONFIG_PATH="${brew_prefix}/bin/pkg-config:${brew_prefix}/opt/icu4c/lib/pkgconfig:${brew_prefix}/opt/curl/lib/pkgconfig:${brew_prefix}/opt/zlib/lib/pkgconfig"
-unset brew_prefix
-
-#* Guarded like every rc.d/<tool>.zsh does. Note these two stay EAGER on purpose:
-#* `mise activate` output embeds a snapshot of the generating shell's PATH plus
-#* `unset GOBIN GOROOT ...`, so it is neither cacheable nor safe to lazy-load
-#* behind a wrapper — the shims have to be on $path before anything resolves a
-#* binary. fnox likewise installs precmd/chpwd hooks that must exist up front.
-#* mise stays an eager, UNCACHED eval: its output embeds `export PATH='<snapshot
-#* of the generating shell's PATH>'` plus `unset GOBIN GOROOT LD_LIBRARY_PATH
-#* PGDATA SNYK_TOKEN`, so caching it would freeze $PATH. Verified: its output
-#* changes with PATH, while all five cached tools' output does not.
-(($+commands[mise])) && eval "$(mise activate zsh)"
-#? fnox's activate output is static function + hook definitions — safe to cache.
-cached-eval fnox activate zsh
-
-# Source anything in rc.d.
-#* (.N): nullglob so an empty rc.d doesn't abort the rc file, and (.) so only
-#* regular files are sourced.
-for _rc in ${ZDOTDIR:-$HOME}/rc.d/*.zsh(.N); do
-  #? Skip editor backups. This catches PREFIX tildes (`~foo.zsh`) only — a suffix
-  #? backup like `foo.zsh~` never matches the `*.zsh` glob in the first place.
-  if [[ $_rc:t != '~'* ]]; then
-    source "$_rc"
-  fi
-done
-unset _rc
+# Keep the config's own files byte-compiled (forks at most once, in the background).
+source ${ZDOTDIR:-$HOME}/lib/zcompile.zsh
 
 #? Companion to the zmodload at the top — report only when profiling was opted into.
 [[ "$ZPROFRC" -ne 1 ]] || zprof
 
 #* Keep `true` last so the first prompt always sees $? == 0. Nothing above ends
-#* falsely today (`unset _rc` returns 0), so this is future-proofing against a
-#* reordering that leaves a failing test as the last statement — starship would
-#* render that as an error status on a shell that started fine.
+#* falsely today, so this is future-proofing against a reordering that leaves a
+#* failing test as the last statement — starship would render that as an error
+#* status on a shell that started fine.
 true

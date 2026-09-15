@@ -1,7 +1,7 @@
 #
 # History
 #
-#* Shell options that aren't history-specific live in 04-opts.zsh, not here.
+#* Shell options that aren't history-specific live in 05-options.zsh, not here.
 
 HISTFILE="$XDG_DATA_HOME/zsh/history.log"
 
@@ -28,11 +28,11 @@ setopt HIST_VERIFY               # Do not execute immediately upon history expan
 setopt HIST_FCNTL_LOCK           # Use fcntl() to lock the history file, not lock files.
 
 #? Dropped from this file (all verified no-ops or duplicates):
-#?   EXTENDED_GLOB           - 04-opts.zsh already sets it; nothing between this
+#?   EXTENDED_GLOB           - 05-options.zsh already sets it; nothing between this
 #?                             file and that one globs, so the early copy was dead
 #?   appendhistory / notify  - already zsh defaults
 #?   INC_APPEND_HISTORY      - implied by SHARE_HISTORY
 #?   HIST_IGNORE_DUPS        - subsumed by HIST_IGNORE_ALL_DUPS
-#?   unsetopt beep           - 04-opts.zsh sets `no_beep`, which loads later anyway
-#?   unsetopt nomatch        - moved to 04-opts.zsh; it's a global globbing change,
+#?   unsetopt beep           - 05-options.zsh sets `no_beep`, which loads later anyway
+#?   unsetopt nomatch        - moved to 05-options.zsh; it's a global globbing change,
 #?                             not a history setting, and it was hidden here.

@@ -16,3 +16,16 @@
 #* `git rev-parse HEAD`, because the object store has ~2,000 pack files and no
 #* multi-pack-index. `git gc` in the repo is the fix, not anything in here.
 cached-eval starship init zsh
+
+#* starship's init defines RPROMPT unconditionally, so every prompt redraw pays a
+#* second `starship prompt --right` fork even when the right prompt renders
+#* nothing. Measured with zsh-bench: 121ms -> 109ms command_lag, for no visible
+#* change. Only starship's `right_format` can produce a right prompt, so the
+#* config file is the authoritative test — if one is ever added, the next
+#* `exec zsh` picks it up and RPROMPT is left alone.
+#? $(<file) is a builtin redirection, not a fork.
+_starship_config=${STARSHIP_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml}
+if [[ ! -r $_starship_config || "$(<$_starship_config)" != *right_format* ]]; then
+  RPROMPT=''
+fi
+unset _starship_config

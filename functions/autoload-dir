@@ -1,0 +1,25 @@
+#!/bin/zsh
+##? autoload-dir - Put directories on $fpath and autoload the function files in them.
+##?
+##? Usage: autoload-dir <dir>...
+##?
+##? Each directory is PREPENDED to $fpath in turn, so the last argument ends up
+##? first. Files whose names begin with `_` are skipped: those are completion
+##? definitions, which compinit loads on its own and which must never be
+##? autoloaded as ordinary functions.
+
+local zdir
+local -a zautoloads
+for zdir in "$@"; do
+  [[ -d "$zdir" ]] || continue
+  fpath=("$zdir" $fpath)
+  #* (N.:t): nullglob so an empty directory is not an error, regular files only,
+  #* basename. Filtering `_*` with `:#` rather than the `~` glob operator keeps
+  #* this working before conf.d/05-options.zsh turns on EXTENDED_GLOB.
+  zautoloads=($zdir/*(N.:t))
+  zautoloads=(${zautoloads:#_*})
+  #* The count guard is required: a bare `autoload -Uz` with no arguments prints
+  #* the autoload list instead of doing nothing.
+  (( $#zautoloads )) && autoload -Uz $zautoloads
+done
+return 0

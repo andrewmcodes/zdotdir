@@ -1,4 +1,4 @@
-#* Creates a directory and then changes into it
+##? mkcd - Create a directory and then change into it.
 #? Single argument on purpose: `mkdir -p a b c && cd $_` would cd into `c` only,
 #? which is never what you meant. Quote paths containing spaces.
 function mkcd() { mkdir -p -- "$1" && cd -- "$1"; }
@@ -18,15 +18,12 @@ function _pg_running_version() {
   print -r -- "${words[1]}"
 }
 
-# Starts the PostgreSQL server using the version installed by mise.
-#
-# This function determines the version of PostgreSQL to run by using the `mise which postgres`
-# command and extracting the version from the output. It then uses `pg_ctl` to start the
-# PostgreSQL server with the appropriate data directory.
-#
-# Arguments: None
-# Outputs: None
-# Example: pg_start
+##? pg_start - Start the PostgreSQL server at the version mise currently resolves.
+##?
+##? Reads the version from `mise which postgres`, then runs that install's `pg_ctl`
+##? against its own data directory.
+##?
+##? Usage: pg_start
 function pg_start {
   #? `:h:h:t` on .../installs/postgres/<version>/bin/postgres, not `awk -F/ '{print $9}'`
   #? — field 9 only lands on the version because $HOME happens to be 2 levels deep.
@@ -39,15 +36,12 @@ function pg_start {
   $pg_ctl_path -D $data_dir start
 }
 
-# Stops the currently running PostgreSQL server.
-#
-# This function determines the currently running PostgreSQL version by querying
-# the server and then uses the `pg_ctl` command to stop the server.
-#
-# Arguments: None
-# Outputs: None
-# Example: pg_stop
-# Note: Ensure that the specified PostgreSQL versions are installed and properly configured in the expected directories.
+##? pg_stop - Stop the currently running PostgreSQL server.
+##?
+##? Asks the running server for its own version, then stops it with that install's
+##? `pg_ctl` — so it works even when mise has since been pointed elsewhere.
+##?
+##? Usage: pg_stop
 function pg_stop {
   #* Declared, then assigned. `local v=$(cmd) || return` cannot work: the exit
   #* status is `local`'s, which is 0 whatever the command substitution did.
@@ -59,16 +53,12 @@ function pg_stop {
   $pg_ctl_path -D $data_dir stop
 }
 
-# pg_switch switches the running PostgreSQL server to the specified version.
-#
-# This function stops the currently running PostgreSQL server and starts the
-# specified version. It also updates the global `mise` version to ensure that
-# `psql` is shimmed to the correct version-directory.
-#
-# Args:
-#   version_to_run: The version of PostgreSQL to switch to.
-# Returns: 1 if the specified version is already running, otherwise nothing.
-# Example: pg_switch 13.3
+##? pg_switch - Switch the running PostgreSQL server to another installed version.
+##?
+##? Stops the running server, starts the requested one, and re-pins the global mise
+##? version so `psql` shims to the matching install.
+##?
+##? Usage: pg_switch <version>     # e.g. pg_switch 17.2
 function pg_switch {
   local version_to_run=$1
   #* Validate the argument BEFORE stopping anything. Without this, `pg_switch`
@@ -107,7 +97,7 @@ function pg_switch {
   mise use -g postgres@$version_to_run
 }
 
-# Deletes selected git branches using fzf for interactive selection.
+##? delete_git_branches - Pick local git branches with fzf and delete them.
 #* `git for-each-ref` rather than `git branch`: it emits bare names, so there is
 #* no `* `/`+ ` prefix to strip and no `(HEAD detached at ...)` pseudo-entry. The
 #* awk filter handles both a branch name containing regex metacharacters and an
@@ -121,7 +111,7 @@ function delete_git_branches() {
     xargs git branch --delete --force
 }
 
-# Installs selected Homebrew formulae using fzf for interactive selection.
+##? install_casks - Pick Homebrew casks with fzf and install them.
 #? -fsSL: without it curl pipes its progress meter into jq and fails silently on
 #? an HTTP error instead of reporting it.
 function install_casks() {
@@ -132,15 +122,13 @@ function install_casks() {
     xargs brew install --cask
 }
 
-# Pretty print the PATH variable with each path on a new line.
+##? print_path - Print $PATH one entry per line.
 #? `print -l` over `echo -e`: no escape-interpretation surprises in path names.
 function print_path() {
   print -l -- ${(s.:.)PATH}
 }
 
-# This function, view_defaults, lists all macOS user defaults domains,
-# allows the user to interactively select one using fzf, and then exports
-# the selected domain's settings to a .plist file.
+##? view_defaults - Pick a macOS defaults domain with fzf and export it to a .plist.
 function view_defaults() {
   defaults domains |
     sed 's/$/, NSGlobalDomain/' |
@@ -150,7 +138,7 @@ function view_defaults() {
     xargs -n1 -I{} sh -c 'defaults export $1 - > $1.plist' -- {}
 }
 
-# Create files, making any missing parent directories along the way.
+##? touchf - Create files, making any missing parent directories along the way.
 #? ${f:h} is zsh's dirname; for a bare filename it yields `.`, and `mkdir -p .` is a
 #? harmless no-op, so bare names need no special-casing.
 function touchf() {
@@ -161,7 +149,7 @@ function touchf() {
   done
 }
 
-# A no-op `$` so a `$ some-command` line pasted from a README just runs.
+##? $ - A no-op `$` so a `$ some-command` line pasted from a README just runs.
 #? Must be written as `function $` — `$() { ... }` parses as a command substitution.
 #* Only the *command* position is affected; $VAR / $(cmd) expansion is untouched,
 #* since parameter expansion happens before command lookup.

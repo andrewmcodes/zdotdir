@@ -1,6 +1,6 @@
 #!/bin/zsh
 #
-# Fixture rc.d file for the optdiff tests. Each line below exercises one
+# Fixture conf.d file for the optdiff tests. Each line below exercises one
 # spelling that optdiff's attribution has to fold onto a canonical option name.
 #
 

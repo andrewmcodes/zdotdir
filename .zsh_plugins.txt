@@ -1,6 +1,6 @@
 #!/bin/zsh
 #
-# antidote_plugins.conf - antidote plugins file
+# .zsh_plugins.txt - antidote plugins file
 #
 
 # Completions
@@ -18,8 +18,8 @@ belak/zsh-utils path:completion/functions kind:autoload post:compstyle_zshzoo_se
 # Keybindings
 belak/zsh-utils path:editor
 
-# History — atuin owns Ctrl-R + Up, initialized in rc.d/zz-atuin.zsh (it's a binary, not a plugin).
-# History options/setopts live in rc.d/01-hist.zsh.
+# History — atuin owns Ctrl-R + Up, initialized in conf.d/zz-atuin.zsh (it's a binary, not a plugin).
+# History options/setopts live in conf.d/02-history.zsh.
 
 # Prompt
 

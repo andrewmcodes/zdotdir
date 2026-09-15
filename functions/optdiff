@@ -1,11 +1,11 @@
 #!/bin/zsh
-# optdiff: Show which shell options this config changes from a pristine zsh, and
-#          which file (if any) is responsible.
-#
-# Usage:
-#   optdiff              # changed options, each attributed to a source
-#   optdiff --plugins    # only options NOT set by a file in $ZDOTDIR
-#   optdiff --raw        # bare option names, one per line (pipe-friendly)
+##? optdiff - Show which shell options this config changes from a pristine zsh,
+##? and which file (if any) is responsible.
+##?
+##? Usage:
+##?   optdiff              # changed options, each attributed to a source
+##?   optdiff --plugins    # only options NOT set by a file in $ZDOTDIR
+##?   optdiff --raw        # bare option names, one per line (pipe-friendly)
 #
 # How it works: bare `setopt` already prints every option that differs from zsh's
 # defaults — in both directions (`noclobber` as readily as `autocd`) — so the
@@ -76,7 +76,8 @@ main() {
       ${ZDOTDIR:-$HOME}/.zshrc(.N) \
       ${ZDOTDIR:-$HOME}/.zlogin(.N) \
       ${ZDOTDIR:-$HOME}/.zstyles(.N) \
-      ${ZDOTDIR:-$HOME}/rc.d/*.zsh(.N); do
+      ${ZDOTDIR:-$HOME}/lib/*.zsh(.N) \
+      ${ZDOTDIR:-$HOME}/conf.d/*.zsh(.N); do
     while IFS= read -r line; do
       [[ $line == [[:space:]]#\#* ]] && continue
       [[ $line == *(setopt|unsetopt)[[:space:]]* ]] || continue

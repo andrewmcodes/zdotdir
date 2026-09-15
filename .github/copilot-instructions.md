@@ -1,29 +1,29 @@
 ## Instructions
 
-This repo is a modular ZSH setup for macOS powered by Homebrew, Antidote, fzf, zoxide, mise, fnox, atuin and starship, with conventions codified across `rc.d/*` and `functions/*`. `AGENTS.md` is the fuller reference — read it too.
+This repo is a modular ZSH setup for macOS powered by Homebrew, Antidote, fzf, zoxide, mise, fnox, atuin and starship, with conventions codified across `lib/*`, `conf.d/*` and `functions/*`. The layout follows [mattmc3/zdotdir](https://github.com/mattmc3/zdotdir). `AGENTS.md` is the fuller reference — read it too.
 
 ### Architecture and load order
 **Boot sequence** (critical for understanding where to add code; Zsh sources these in this fixed order):
-1. `.zshenv` - All shell types, sourced first (XDG base dirs, exported env vars, tool cache/config redirection, `FZF_DEFAULT_OPTS`). Keep minimal and fast — no subprocess-heavy work. **No secrets:** `FNOX_AGE_KEY` was deliberately removed and nothing replaced it — fnox's age provider already defaults to `$XDG_CONFIG_HOME/fnox/age.txt`. Don't re-add it.
-2. `.zprofile` - Login shells only (OrbStack init, Obsidian PATH)
-3. `.zshrc` - Interactive shells (main config, loads everything else):
+1. `.zshenv` - All shell types, sourced first. Deliberately tiny: the four XDG base dirs, then `source .zprofile` when the shell is **not** a login shell. That is what makes scripts and `zsh -c` see the same `$path` and environment an interactive shell does.
+2. `.zprofile` - `$path`, `$prepath`, `$cdpath`, and every exported variable (tool cache/config redirection, `FZF_DEFAULT_OPTS`, `PKG_CONFIG_PATH`, OrbStack, Obsidian). Login shells source it directly; everything else gets it from `.zshenv`, so treat it as "runs for every zsh": no subprocess-heavy work, and everything must be idempotent because nested shells re-read it. **No secrets:** `FNOX_AGE_KEY` was deliberately removed and nothing replaced it — fnox's age provider already defaults to `$XDG_CONFIG_HOME/fnox/age.txt`. Don't re-add it.
+3. `.zshrc` - Interactive shells; an orchestrator and nothing else:
    - Loads `zsh/zprof` when `ZPROFRC=1` (the `zprofrc` alias) and dumps the report at the end
-   - Sets up `path` and `fpath` arrays (`functions/` and `completions/` both go on `fpath`)
-   - Autoloads all functions from `functions/` directory
    - Sources `.zstyles` for antidote/completion configuration
-   - Sources the antidote static plugin file directly (regenerating it from `antidote_plugins.conf` only when the `.conf` changes; skips `antidote load`'s per-startup overhead), then re-applies `path=($path)` because the loader's scalar `export PATH=…` bypasses `typeset -gU`
-   - Activates `mise` (eager and uncached on purpose — its output embeds a `PATH` snapshot) and `fnox` (through `cached-eval`)
-   - Sources all `rc.d/*.zsh` files alphabetically, then ends on `true`
+   - Puts `functions/` on `fpath`, then calls `autoload-dir` on `completions/` and `functions/`
+   - Sources `lib/antidote.zsh`, `lib/confd.zsh`, `lib/zcompile.zsh` — in that order — then ends on `true`
+   - If you are adding configuration, it almost certainly does not belong in this file
 
-**Plugin loading**: Antidote reads `antidote_plugins.conf` and generates static plugin code. Plugins use annotations like `kind:fpath`, `kind:defer`, `path:`, `conditional:is-macos`, `pin:` (literal 40-char SHA — the `.conf` is read via a plain `<` redirect, so `$VAR` is never expanded). `.zstyles` also sets `zstyle ':antidote:*' zcompile 'yes'`, byte-compiling the plugin files and the generated loader.
+**`lib/`** holds the bootstrap steps `.zshrc` sources by name: `antidote.zsh` (source antidote, regenerate + source the static bundle, re-apply `path=($path)` because the loader's scalar `export PATH=…` bypasses `typeset -gU`), `confd.zsh` (source every `conf.d/*.zsh`), `zcompile.zsh` (keep this config's own files byte-compiled).
 
-**Function auto-loading**: All files in `functions/` are added to `fpath` and autoloaded, making them available as commands without explicit sourcing. Hand-written completions live in `completions/` (also on `fpath`).
+**Plugin loading**: Antidote reads `.zsh_plugins.txt` and generates static plugin code into `.zsh_plugins.zsh`. Plugins use annotations like `kind:fpath`, `kind:defer`, `path:`, `conditional:is-macos`, `pin:` (literal 40-char SHA — the plugins file is read via a plain `<` redirect, so `$VAR` is never expanded). `.zstyles` also sets `zstyle ':antidote:*' zcompile 'yes'`, byte-compiling the plugin files and the generated loader.
 
-**rc.d loading order matters**: Files load alphabetically, so `01-hist.zsh` loads before `05-aliases.zsh`. Numeric prefixes (`01-hist`, `02_dirs`, `03-completion`, `04-opts`, `05-aliases`, `06-commands`) sequence the ordered ones; a `zz-` prefix forces late (`zz-atuin` must load after `fzf.zsh` to keep `Ctrl-R`).
+**Function auto-loading**: `functions/autoload-dir` puts a directory on `fpath` and autoloads every non-`_` file in it. `.zshrc` calls it on `completions/` and `functions/`, making each file in `functions/` available as a command without explicit sourcing.
+
+**conf.d loading order matters**: Files load alphabetically, so `02-history.zsh` loads before `06-aliases.zsh`. Numeric prefixes (`00-mise`, `01-fnox`, `02-history`, `03-directories`, `04-completion`, `05-options`, `06-aliases`, `07-commands`) sequence the ordered ones; a `zz-` prefix forces late (`zz-atuin` must load after `fzf.zsh` to keep `Ctrl-R`). `00-mise` stays first — everything after it resolves binaries through mise's shims.
 
 ### Conventions you should follow
 
-**Alias patterns** ([rc.d/05-aliases.zsh](../rc.d/05-aliases.zsh)):
+**Alias patterns** ([conf.d/06-aliases.zsh](../conf.d/06-aliases.zsh)):
 - **Grouped aliases**: Use brace expansion for related commands: `alias {cz.apply,chezA}="chezmoi apply"`
 - **Naming conventions**:
   - Homebrew: `brewi` (install), `brewU` (upgrade), `brewX` (force uninstall)
@@ -35,7 +35,7 @@ This repo is a modular ZSH setup for macOS powered by Homebrew, Antidote, fzf, z
 
 **Function patterns**:
 - **Location decision**:
-  - `rc.d/06-commands.zsh`: Multi-line utilities used within this config (e.g., `pg_start`, `delete_git_branches`)
+  - `conf.d/07-commands.zsh`: Multi-line utilities used within this config (e.g., `pg_start`, `delete_git_branches`)
   - `functions/*`: Standalone commands you'd run directly (e.g., `grecent`, `is-macos`)
 - **Function structure** ([functions/grecent](../functions/grecent)):
   - Start with `#!/bin/zsh` (8 of 9 do; `bench-startup` is the lone `#!/usr/bin/env zsh`). The shebang is decorative — zsh autoloads these, it never execs them
@@ -48,11 +48,11 @@ This repo is a modular ZSH setup for macOS powered by Homebrew, Antidote, fzf, z
   git branch | fzf --multi --preview="git log {} --" | xargs git branch -D
   ```
 
-**Tool resolution patterns** ([rc.d/06-commands.zsh](../rc.d/06-commands.zsh)):
+**Tool resolution patterns** ([conf.d/07-commands.zsh](../conf.d/07-commands.zsh)):
 - Rails: `bin/rails` → `bundle exec rails` → system `rails`
 - Postgres: Uses mise-managed installations at `~/.local/share/mise/installs/postgres/$version/`
 
-**Named directories** ([rc.d/02_dirs.zsh](../rc.d/02_dirs.zsh)):
+**Named directories** ([conf.d/03-directories.zsh](../conf.d/03-directories.zsh)):
 - Define shortcuts with `hash -d name=path`
 - Available everywhere as `~name` (e.g., `cd ~zsh`, `ls ~podia`)
 
@@ -77,7 +77,7 @@ cached-eval --list              # What tool-init output is cached
 
 **Plugin management**:
 ```zsh
-# Edit antidote_plugins.conf, then:
+# Edit .zsh_plugins.txt, then:
 exec zsh                        # Auto-regenerates plugin cache
 antidote list                   # Show installed plugins
 antidote update                 # Update all plugins
@@ -94,7 +94,7 @@ zprofrc
 command -v tool_name            # Returns path or nothing
 ```
 
-### Performance rules (critical for rc.d/*.zsh)
+### Performance rules (critical for conf.d/*.zsh)
 
 **Don't fork a tool's `init` on every startup** (from [.github/instructions/Improve Performance.instructions.md](instructions/Improve Performance.instructions.md)):
 ```zsh
@@ -102,7 +102,7 @@ command -v tool_name            # Returns path or nothing
 eval "$(starship init zsh)"
 
 # BEST here: cache the output to disk and source that instead. Used by
-# rc.d/{starship,fzf,zoxide,zz-atuin}.zsh and by fnox in .zshrc.
+# conf.d/{starship,fzf,zoxide,zz-atuin,01-fnox}.zsh.
 cached-eval starship init zsh
 
 # GOOD when the output ISN'T cacheable and isn't needed until first use:
@@ -126,11 +126,11 @@ if gls &>/dev/null; then
 # GOOD: Just checks PATH
 if command -v gls >/dev/null 2>&1; then
 
-# BEST: ZSH built-in (used in rc.d/fzf.zsh)
+# BEST: ZSH built-in (used in conf.d/fzf.zsh)
 (($+commands[fzf])) || return 1
 ```
 
-**Completion optimization**: `compinit` is owned by the ez-compinit plugin (cached; see `antidote_plugins.conf`) — never add a second one. `rc.d/03-completion.zsh` stamps `$fpath` next to the dump and drops the dump when it changes, so a newly added completion works on the next shell instead of up to 20h later.
+**Completion optimization**: `compinit` is owned by the ez-compinit plugin (cached; see `.zsh_plugins.txt`) — never add a second one. `conf.d/04-completion.zsh` stamps `$fpath` next to the dump and drops the dump when it changes, so a newly added completion works on the next shell instead of up to 20h later.
 
 **File patterns**: Use ZSH glob qualifiers: `(N)` nullglob, `(.)` regular files only, `:t` tail (basename) — e.g. `$ZFUNCDIR/*(.N:t)`. The `(N)` is mandatory: without it an empty directory aborts the whole rc file with "no matches found".
 
@@ -138,16 +138,16 @@ if command -v gls >/dev/null 2>&1; then
 
 | What | Where | Examples |
 |------|-------|----------|
-| Aliases | [rc.d/05-aliases.zsh](../rc.d/05-aliases.zsh) | `brewUp`, `caskz`, `jason`, `{cz.apply,chezA}` |
-| Shell utilities | [rc.d/06-commands.zsh](../rc.d/06-commands.zsh) | `pg_start`, `pg_stop`, `pg_switch`, `delete_git_branches` |
+| Aliases | [conf.d/06-aliases.zsh](../conf.d/06-aliases.zsh) | `brewUp`, `caskz`, `jason`, `{cz.apply,chezA}` |
+| Shell utilities | [conf.d/07-commands.zsh](../conf.d/07-commands.zsh) | `pg_start`, `pg_stop`, `pg_switch`, `delete_git_branches` |
 | Standalone commands | `functions/*` | `grecent`, `is-macos`, `bench-startup`, `cached-eval`, `optdiff` |
-| History settings | [rc.d/01-hist.zsh](../rc.d/01-hist.zsh) | `HISTFILE`, `SAVEHIST`, history options |
-| Directory shortcuts | [rc.d/02_dirs.zsh](../rc.d/02_dirs.zsh) | `hash -d` definitions, `IWD`/`iwd` |
-| Shell options (`setopt`) | [rc.d/04-opts.zsh](../rc.d/04-opts.zsh) | Single owner of every non-history `setopt`; check with `optdiff` |
-| Completion for our own aliases | [rc.d/03-completion.zsh](../rc.d/03-completion.zsh) | `compdef g=git`; also the `$fpath` compdump stamp |
+| History settings | [conf.d/02-history.zsh](../conf.d/02-history.zsh) | `HISTFILE`, `SAVEHIST`, history options |
+| Directory shortcuts | [conf.d/03-directories.zsh](../conf.d/03-directories.zsh) | `hash -d` definitions, `IWD`/`iwd` |
+| Shell options (`setopt`) | [conf.d/05-options.zsh](../conf.d/05-options.zsh) | Single owner of every non-history `setopt`; check with `optdiff` |
+| Completion for our own aliases | [conf.d/04-completion.zsh](../conf.d/04-completion.zsh) | `compdef g=git`; also the `$fpath` compdump stamp |
 | Hand-written completion files | `completions/_<command>` | On `fpath`; see [completions/README.md](../completions/README.md) |
-| Tool integrations | `rc.d/*.zsh` | `fzf.zsh`, `zoxide.zsh`, `starship.zsh`, `zz-atuin.zsh` |
-| Plugins | `antidote_plugins.conf` | One plugin per line with annotations |
+| Tool integrations | `conf.d/*.zsh` | `fzf.zsh`, `zoxide.zsh`, `starship.zsh`, `zz-atuin.zsh` |
+| Plugins | `.zsh_plugins.txt` | One plugin per line with annotations |
 
 ### External dependencies
 
@@ -155,7 +155,7 @@ if command -v gls >/dev/null 2>&1; then
 - **Core**: antidote, fzf, zoxide, mise, starship
 - **File tools**: eza, bat, ripgrep, fd, jq
 - **Dev tools**: tmux, overmind, chezmoi, neovim, vscode-insiders
-- **Shell history**: atuin (initialized in `rc.d/zz-atuin.zsh` — a binary, not an antidote plugin; needs the `atuin` binary)
+- **Shell history**: atuin (initialized in `conf.d/zz-atuin.zsh` — a binary, not an antidote plugin; needs the `atuin` binary)
 - **Secrets**: fnox (installed via `mise`; age-encrypted; `fnox activate zsh` runs in `.zshrc` through `cached-eval`; the age identity comes from `$XDG_CONFIG_HOME/fnox/age.txt` by default — no env var holds it)
 - **Tests**: zunit + revolver (`brew install zunit-zsh/zunit/zunit`), run via `mise run test`
 
@@ -168,30 +168,30 @@ if command -v gls >/dev/null 2>&1; then
 - Group related aliases with brace expansion
 - Add fzf preview windows for interactive commands
 - Check tool existence before defining wrappers
-- Use numeric prefixes (01-, 02-) to control rc.d load order
+- Use numeric prefixes (01-, 02-) to control conf.d load order
 - Keep functions focused on single responsibility
 
 **❌ DON'T**:
 - Run expensive commands at shell startup (use `cached-eval`, or a lazy-loading wrapper)
 - Forget to set `#!/bin/zsh` in `functions/*` files
-- Create rc.d files without considering alphabetical load order
+- Create conf.d files without considering alphabetical load order
 - Use a tool-specific init (e.g., `rbenv init`) as a bare `eval "$( … )"`
 - Add a second `compinit` (ez-compinit owns it)
 - Hard-wrap prose in Markdown — write each paragraph as one physical line
-- Edit `antidote_plugins.zsh` by hand (generated) — edit `antidote_plugins.conf`
+- Edit `.zsh_plugins.zsh` by hand (generated) — edit `.zsh_plugins.txt`
 
 ### Key patterns from codebase
 
-**Postgres version switching** ([rc.d/06-commands.zsh](../rc.d/06-commands.zsh)):
+**Postgres version switching** ([conf.d/07-commands.zsh](../conf.d/07-commands.zsh)):
 - Manages multiple mise-installed versions
 - Stops current server, starts new one, updates mise global version
 - Pattern useful for other version-managed services
 
-**Interactive installers** ([rc.d/06-commands.zsh](../rc.d/06-commands.zsh)):
+**Interactive installers** ([conf.d/07-commands.zsh](../conf.d/07-commands.zsh)):
 - `install_casks`: Fetches Homebrew API, uses fzf for selection with JSON preview
 - Pattern: `curl API | jq | fzf --preview | xargs brew install`
 
-**macOS defaults viewer** ([rc.d/06-commands.zsh](../rc.d/06-commands.zsh)):
+**macOS defaults viewer** ([conf.d/07-commands.zsh](../conf.d/07-commands.zsh)):
 - Lists all domains, preview with plistlib, export selected
 - Shows advanced fzf preview with Python one-liner
 

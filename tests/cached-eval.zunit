@@ -27,6 +27,13 @@
   assert "$CE_DIR/ce-ok" is_file
 }
 
+@test 'the cache file is byte-compiled for the next shell' {
+  XDG_CACHE_HOME=$CE_HOME run cached-eval ce-ok
+
+  assert $state equals 0
+  assert "$CE_DIR/ce-ok.zwc" is_file
+}
+
 @test 'the cache file holds the command output verbatim' {
   XDG_CACHE_HOME=$CE_HOME cached-eval ce-ok
 
@@ -47,6 +54,11 @@
   #? Plant a marker the command itself would never produce. Note we can't test
   #? this by breaking the fixture — rewriting it updates its mtime, which
   #? correctly invalidates the cache via the -nt check.
+  #* The `sleep` is not padding: cached-eval byte-compiles the cache, and zsh
+  #* compares a .zwc against its source in WHOLE SECONDS. Without a full second
+  #* between the build and this edit, the (now stale) .zwc still wins and the
+  #* marker below comes back as `sourced`.
+  sleep 1
   print 'ZUNIT_CE_MARKER=from_cache' >! "$CE_DIR/ce-ok"
   touch "$CE_DIR/ce-ok"
 

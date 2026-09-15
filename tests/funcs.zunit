@@ -4,15 +4,33 @@
 # independent of the real config. When stdout is not a TTY (as under zunit),
 # funcs prints bare command names, one per line, sorted.
 
-@test 'lists autoloaded and rc.d commands, hiding _private ones' {
+@test 'lists autoloaded and conf.d commands, hiding _private ones' {
   local fixture="${ZUNIT_SUPPORT_DIR}/funcs-fixture"
   ZDOTDIR="$fixture" ZFUNCDIR="$fixture/functions" run funcs
 
   assert $state equals 0
-  assert "${#lines}" equals 3
+  assert "${#lines}" equals 4
   assert "${lines[1]}" same_as 'alpha'
   assert "${lines[2]}" same_as 'beta'
-  assert "${lines[3]}" same_as 'gamma'
+  assert "${lines[3]}" same_as 'delta'
+  assert "${lines[4]}" same_as 'gamma'
+}
+
+@test 'prefers a ##? docstring and strips the leading name' {
+  local fixture="${ZUNIT_SUPPORT_DIR}/funcs-fixture"
+  #? funcs only prints descriptions when stdout is a TTY, so `script` supplies one.
+  run script -q /dev/null zsh -fc \
+    "fpath=(${(q)ZUNIT_PROJECT_ROOT}/functions \$fpath); autoload -Uz funcs; ZDOTDIR=${(q)fixture} ZFUNCDIR=${(q)fixture}/functions funcs"
+
+  assert $state equals 0
+  #? An autoloaded function: the ##? line wins and `alpha - ` is trimmed off it.
+  assert "$output" contains 'Alpha does alpha things'
+  assert "$output" does_not_contain 'alpha - Alpha'
+  #? A conf.d function: same, except the name is only known after the comment block.
+  assert "$output" contains 'Gamma helper defined inline in conf.d'
+  assert "$output" does_not_contain 'gamma - Gamma'
+  #? Fallback for anything predating the convention: a plain leading comment.
+  assert "$output" contains 'Delta has only an ordinary leading comment'
 }
 
 @test 'filters results by name pattern' {

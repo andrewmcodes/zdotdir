@@ -1,10 +1,10 @@
 #!/usr/bin/env zsh
-# bench-startup: Measure interactive shell startup time using `time` and `hyperfine` if available.
-# Usage:
-#   bench-startup          # Quick built-in timing (5 runs)
-#   bench-startup 20       # Specify number of runs
-# Dependencies:
-#   hyperfine (optional) for statistically robust measurements.
+##? bench-startup - Measure interactive shell startup time with `time`, and with
+##? `hyperfine` when it is installed.
+##?
+##? Usage:
+##?   bench-startup          # quick built-in timing (5 runs)
+##?   bench-startup 20       # specify the number of runs
 
 #* `set -euo pipefail` leaks into the CALLING shell from an autoloaded function.
 #* `emulate -L zsh` scopes options to this function; it implies local_options.

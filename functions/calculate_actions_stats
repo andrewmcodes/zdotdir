@@ -1,9 +1,9 @@
 #!/bin/zsh
-# calculate_actions_stats: Read one number per line on stdin, print its average and median.
-#
-# Usage:
-#   fetch_action_stats | calculate_actions_stats
-#   printf '5\n1\n3\n' | calculate_actions_stats   # -> avg=3.0 / median=3.0
+##? calculate_actions_stats - Read one number per line on stdin, print average and median.
+##?
+##? Usage:
+##?   fetch_action_stats | calculate_actions_stats
+##?   printf '5\n1\n3\n' | calculate_actions_stats   # -> avg=3.0 / median=3.0
 #
 # Input need not be sorted — `fetch_action_stats` emits reverse-chronological
 # order, so the values are sorted here before the median is taken.

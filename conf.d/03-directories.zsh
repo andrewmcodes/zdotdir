@@ -1,6 +1,6 @@
 ##
 # Named directories
-# https://github.com/marlonrichert/zsh-launchpad/blob/main/.config/zsh/rc.d/02-dirs.zsh
+# Adapted from https://github.com/marlonrichert/zsh-launchpad
 #
 # Create shortcuts for your favorite directories.
 # Set these early, because it affects how dirs are displayed and printed.

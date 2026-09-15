@@ -38,12 +38,12 @@ This configuration relies on the following external tools:
 - **[Chezmoi](https://www.chezmoi.io/)** - Dotfiles manager
 - **[Overmind](https://github.com/DarthSim/overmind)** - Process manager
 - **[tmux](https://github.com/tmux/tmux)** - Terminal multiplexer
-- **[fnox](https://fnox.jdx.dev)** - age-encrypted secrets/env manager, installed via `mise` (activated in `.zshrc` through `cached-eval`). The age identity is read from `$XDG_CONFIG_HOME/fnox/age.txt`, which is the provider's default — no environment variable carries the key.
+- **[fnox](https://fnox.jdx.dev)** - age-encrypted secrets/env manager, installed via `mise` (activated in `conf.d/01-fnox.zsh` through `cached-eval`). The age identity is read from `$XDG_CONFIG_HOME/fnox/age.txt`, which is the provider's default — no environment variable carries the key.
 - **[zunit](https://zunit.xyz)** - ZSH unit testing framework, used by `mise run test` (install via `brew install zunit-zsh/zunit/zunit`)
 
 ## ZSH Plugins
 
-Plugins are managed via Antidote and configured in `antidote_plugins.conf`:
+Plugins are managed via Antidote and configured in `.zsh_plugins.txt`:
 
 ### Completions
 - **[mattmc3/ez-compinit](https://github.com/mattmc3/ez-compinit)** - Easy completion initialization
@@ -58,20 +58,26 @@ Plugins are managed via Antidote and configured in `antidote_plugins.conf`:
 - **[ohmyzsh/ohmyzsh](https://github.com/ohmyzsh/ohmyzsh)** - Extract plugin for archive handling (deferred; its `_extract` completion is still added to `fpath` eagerly)
 
 ### Fish-like Features
-- **[zdharma-continuum/fast-syntax-highlighting](https://github.com/zdharma-continuum/fast-syntax-highlighting)** - Syntax highlighting (deferred, and **pinned** to a reviewed SHA — see the comment in `antidote_plugins.conf`)
+- **[zdharma-continuum/fast-syntax-highlighting](https://github.com/zdharma-continuum/fast-syntax-highlighting)** - Syntax highlighting (deferred, and **pinned** to a reviewed SHA — see the comment in `.zsh_plugins.txt`)
 - **[zsh-users/zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions)** - Command auto-suggestions
 
 Antidote is also configured (in `.zstyles`) to byte-compile the plugin files and the generated static loader, so each `source` reads a `.zwc` instead of re-parsing the script.
 
 ## Shell History
 
-Shell history is handled by **[atuin](https://github.com/atuinsh/atuin)** (SQLite-backed, searchable). It's a binary rather than an antidote plugin, so it's initialized in `rc.d/zz-atuin.zsh` (loaded after `fzf.zsh` so it owns `Ctrl-R` and the Up arrow). Requires the `atuin` binary. Run `atuin import auto` once to bring in existing shell history.
+Shell history is handled by **[atuin](https://github.com/atuinsh/atuin)** (SQLite-backed, searchable). It's a binary rather than an antidote plugin, so it's initialized in `conf.d/zz-atuin.zsh` (loaded after `fzf.zsh` so it owns `Ctrl-R` and the Up arrow). Requires the `atuin` binary. Run `atuin import auto` once to bring in existing shell history.
 
 ## Startup Performance
 
 Startup speed is a primary goal of this config, so tool integrations don't fork a subprocess on every shell start. `starship`, `fzf`, `zoxide`, `atuin` and `fnox` are initialized through **`cached-eval`**, which writes each tool's `init` output to `~/.cache/zsh/cached-eval/` and sources that instead, re-running the tool only when its binary changes or the 7-day TTL lapses (`cached-eval --list` / `--clear`).
 
 `mise activate` is the deliberate exception: it stays eager and uncached, because its output embeds a snapshot of the generating shell's `PATH` and its shims must be on `$path` before anything resolves a binary.
+
+`lib/zcompile.zsh` keeps the config's own startup files (`.zshenv`, `.zprofile`, `.zshrc`, `.zstyles`, `lib/*.zsh`, `conf.d/*.zsh`) byte-compiled, and `cached-eval` byte-compiles each cache file it writes, so a `source` reads a `.zwc` instead of re-parsing. The recompile is backgrounded and only happens when a file actually changed.
+
+`conf.d/starship.zsh` clears `RPROMPT` unless `starship.toml` defines a `right_format`. Starship's init defines the right prompt unconditionally, which costs a second `starship prompt --right` fork on every redraw for output that renders nothing — measured at ~12ms of `command_lag` per command.
+
+What is *not* fixable from here: the remaining per-prompt cost is one fork each for `starship prompt`, `mise hook-env` and `fnox hook-env`, all of which have to run for those tools to be correct. On a large repo the starship fork is dominated by `git_status`, and the levers for that are git-side (`core.untrackedCache`, `core.fsmonitor`, `git gc`) — see the comment in `conf.d/starship.zsh`.
 
 Diagnostics:
 
@@ -88,19 +94,24 @@ Profile a *fresh* shell with `zprofrc`, not a re-source — anything cached or g
 
 ```
 zdotdir/
-├── .zshenv                # Environment variables for all ZSH sessions (sourced first)
-├── .zprofile              # Login-shell setup (OrbStack init, Obsidian PATH)
-├── .zshrc                 # Interactive shell configuration
+├── .zshenv                # XDG base dirs, then hands off to .zprofile (every zsh)
+├── .zprofile              # $path, $cdpath and every export (login shells; .zshenv sources it for the rest)
+├── .zshrc                 # Interactive orchestrator — sources lib/, then conf.d/
 ├── .zstyles               # ZSH completion and plugin styles
-├── antidote_plugins.conf  # Antidote plugin definitions (edit this)
-├── antidote_plugins.zsh   # Generated static load file, sourced directly by .zshrc (do not edit by hand)
+├── .zsh_plugins.txt       # Antidote plugin definitions (edit this)
+├── .zsh_plugins.zsh       # Generated static load file, sourced directly (do not edit by hand)
 ├── mise.toml              # mise tasks (`mise run test`)
 ├── .zunit.yml             # zunit test-runner configuration
+├── lib/                   # Bootstrap steps, sourced explicitly and in order by .zshrc
+│   ├── antidote.zsh       # Source antidote, regenerate + source the static bundle
+│   ├── confd.zsh          # Source every conf.d/*.zsh in alphabetical order
+│   └── zcompile.zsh       # Keep this config's own files byte-compiled
 ├── completions/           # Hand-written `_<command>` completion files, on $fpath
 │   └── README.md          # What belongs here — and what doesn't
 ├── docs/
 │   └── antidote.md        # Antidote usage and annotation reference
 ├── functions/             # Custom ZSH functions (auto-loaded, one per file)
+│   ├── autoload-dir       # Put dirs on $fpath and autoload the function files in them
 │   ├── bench-startup
 │   ├── cached-eval        # Cache a tool's `init` output to disk (see below)
 │   ├── calculate_actions_stats
@@ -113,13 +124,15 @@ zdotdir/
 ├── tests/                 # zunit suite (`mise run test`)
 │   ├── *.zunit            # One suite per function under test
 │   └── _support/          # bootstrap, fake tools, and fixture $ZDOTDIRs
-└── rc.d/                  # Modular configuration files
-    ├── 01-hist.zsh        # History configuration
-    ├── 02_dirs.zsh        # Named directory shortcuts (hash -d ~name) and `iwd`
-    ├── 03-completion.zsh  # Compdump invalidation + completion for our short aliases
-    ├── 04-opts.zsh        # Shell options (the single owner of every non-history setopt)
-    ├── 05-aliases.zsh     # All shell aliases
-    ├── 06-commands.zsh    # Custom shell functions
+└── conf.d/                # Config snippets, sourced alphabetically by lib/confd.zsh
+    ├── 00-mise.zsh        # mise activate (eager and uncached, deliberately — must be first)
+    ├── 01-fnox.zsh        # fnox activate (installed by mise, so it loads after it)
+    ├── 02-history.zsh     # History configuration
+    ├── 03-directories.zsh # Named directory shortcuts (hash -d ~name) and `iwd`
+    ├── 04-completion.zsh  # Compdump invalidation + completion for our short aliases
+    ├── 05-options.zsh     # Shell options (the single owner of every non-history setopt)
+    ├── 06-aliases.zsh     # All shell aliases
+    ├── 07-commands.zsh    # Custom shell functions
     ├── fzf.zsh            # FZF integration
     ├── starship.zsh       # Starship prompt setup
     ├── zoxide.zsh         # Zoxide directory jumper setup
@@ -127,14 +140,15 @@ zdotdir/
 ```
 
 ### Key Files
-- **`.zshenv`** - Environment variables and XDG base dirs; sourced for every shell, before `.zprofile` and `.zshrc`
-- **`.zprofile`** - Login-shell setup only (OrbStack init, Obsidian PATH)
-- **`.zshrc`** - Main configuration file that loads plugins and sources rc.d files
+- **`.zshenv`** - Sourced for every zsh, scripts included. Sets the XDG base dirs, then sources `.zprofile` when the shell is not a login shell
+- **`.zprofile`** - `$path`, `$cdpath`, and every exported variable. Login shells source it directly; everything else gets it via `.zshenv`, so a script sees the same environment an interactive shell does
+- **`.zshrc`** - Orchestrator only: `.zstyles`, autoload `functions/`, then `lib/antidote.zsh`, `lib/confd.zsh`, `lib/zcompile.zsh`
 - **`.zstyles`** - ZSH completion styling and antidote configuration
-- **`antidote_plugins.conf`** - Defines all ZSH plugins to be loaded (the file you edit; `antidote_plugins.zsh` is generated)
+- **`.zsh_plugins.txt`** - Defines all ZSH plugins to be loaded (the file you edit; `.zsh_plugins.zsh` is generated)
+- **`lib/`** - Bootstrap steps `.zshrc` sources by name, in a deliberate order
 - **`functions/`** - Custom shell functions auto-loaded at startup
 - **`completions/`** - Hand-written `_<command>` completion files, also on `$fpath`
-- **`rc.d/`** - Modular configuration files for different aspects of the shell
+- **`conf.d/`** - Modular configuration files for different aspects of the shell
 
 ## Installation
 
@@ -166,17 +180,20 @@ Unit tests are written with [zunit](https://zunit.xyz) and run through a [mise](
    mise run test   # or: mise run t
    ```
 
-Tests live in `tests/*.zunit` with configuration in `.zunit.yml`; `tests/_support/bootstrap` autoloads the functions under test. The suite is 34 tests over the four functions with real logic (`funcs`, `calculate_actions_stats`, `cached-eval`, `optdiff`) — interactive and side-effecting commands (fzf wrappers, `pg_*`, anything hitting `gh`/`brew`) are intentionally not covered.
+Tests live in `tests/*.zunit` with configuration in `.zunit.yml`; `tests/_support/bootstrap` autoloads the functions under test. The suite is 36 tests over the four functions with real logic (`funcs`, `calculate_actions_stats`, `cached-eval`, `optdiff`) — interactive and side-effecting commands (fzf wrappers, `pg_*`, anything hitting `gh`/`brew`) are intentionally not covered.
 
 ## Functions Documentation
 
-Custom shell functions live in two places: one file per function in `functions/` (auto-loaded at startup) and inline definitions in `rc.d/06-commands.zsh`.
+Custom shell functions live in two places: one file per function in `functions/` (auto-loaded at startup) and inline definitions in `conf.d/07-commands.zsh`.
 
-Run **`funcs`** to discover them at any time — it lists only your own commands (with descriptions pulled from each function's leading comment) and hides private helpers and plugin/zsh-internal functions. `funcs <pattern>` filters by name, and `funcs | fzf` emits bare names for scripting. Because it reads the files directly, any function you add shows up automatically as long as it has a leading comment.
+Run **`funcs`** to discover them at any time — it lists only your own commands (with descriptions pulled from each function's `##?` docstring, falling back to its first ordinary comment line) and hides private helpers and plugin/zsh-internal functions. `funcs <pattern>` filters by name, and `funcs | fzf` emits bare names for scripting. Because it reads the files directly, any function you add shows up automatically as long as it has a leading comment.
+
+The `##?` prefix is this config's docstring convention (borrowed from [mattmc3/zman](https://github.com/mattmc3/zman)); `#?` marks an explanatory note and `#*` an important one.
 
 | Function | Description |
 |----------|-------------|
 | `funcs` | List your own shell commands with descriptions (this command) |
+| `autoload-dir` | Put directories on `$fpath` and autoload the function files in them |
 | `bench-startup` | Measure interactive shell startup time using `time` and `hyperfine` if available |
 | `cached-eval` | Source a command's zsh output, caching it to disk so later shells skip the subprocess (`--list`, `--clear`) |
 | `optdiff` | Show which shell options this config changes from a pristine zsh, and which file set each (`--plugins`, `--raw`) |
@@ -373,3 +390,5 @@ This document provides a comprehensive list of all available aliases organized b
 | `b` | `bundle` | Bundle shortcut |
 | `be` | `bundle exec` | Execute bundled command |
 | `up` | `git pull && bundle check \|\| bundle && yarn && rails db:migrate` | Update project |
+
+

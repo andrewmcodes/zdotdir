@@ -6,7 +6,7 @@
 #
 # Usage: source <this file> <project-root> [optdiff args...]
 #
-#   autocd, nobeep, nonomatch  - set here AND by the fixture's rc.d files
+#   autocd, nobeep, nonomatch  - set here AND by the fixture's conf.d files
 #   histverify, promptsubst    - set here and by nobody else, i.e. the "plugin"
 #                                case (the fixture only names them in comments)
 

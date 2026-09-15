@@ -1,12 +1,12 @@
 #!/bin/zsh
-# cached-eval: Source a command's zsh output, caching it to disk so later shells
-#              skip the subprocess.
-#
-# Usage:
-#   cached-eval starship init zsh    # instead of: eval "$(starship init zsh)"
-#   cached-eval --list               # show what's cached, most recently built first
-#   cached-eval --clear              # drop every cached file
-#   cached-eval --clear starship     # drop only caches matching *starship*
+##? cached-eval - Source a command's zsh output, caching it to disk so later
+##? shells skip the subprocess.
+##?
+##? Usage:
+##?   cached-eval starship init zsh    # instead of: eval "$(starship init zsh)"
+##?   cached-eval --list               # show what's cached, most recently built first
+##?   cached-eval --clear              # drop every cached file
+##?   cached-eval --clear starship     # drop only caches matching *starship*
 #
 # Behaviour worth knowing:
 #   - Keyed on the FULL command line, so `tool init zsh` and `tool init bash`
@@ -18,13 +18,18 @@
 #     `brew upgrade` automatically) and by $ZSH_CACHED_EVAL_TTL seconds as a
 #     backstop (default 604800 = 7 days).
 #   - Returns 1 silently when the command isn't installed, so callers can keep
-#     the same idiom as the rest of rc.d: `cached-eval foo init zsh || return 1`.
+#     the same idiom as the rest of conf.d: `cached-eval foo init zsh || return 1`.
+#   - Byte-compiles each cache file on rebuild, so the usual `source` of it reads
+#     a .zwc rather than re-parsing the tool's init script. zsh compares the two
+#     mtimes in WHOLE SECONDS, so a cache file edited by hand within the same
+#     second it was built is still served from the compiled copy. Use --clear
+#     rather than editing a cache file in place.
 #
 #* Locals are `_ce_`-prefixed on purpose: this function `source`s third-party code
 #* in its own scope, and an unprefixed `key`/`out`/`tmp` could shadow a parameter
 #* that code expects to read or set.
 #
-#* Deliberately NOT the repo's usual `main() { … }; main "$@"` shape. .zshrc calls
+#* Deliberately NOT the repo's usual `main() { … }; main "$@"` shape. conf.d calls
 #* `cached-eval fnox activate zsh` during startup, so a `main` wrapper would leave
 #* a global function named `main` defined in EVERY interactive shell — clobbering
 #* the user's own `main` and making `which main` print this file. Private name +
@@ -43,16 +48,20 @@ _cached_eval_main() {
     #* under a live shell makes its `mv` fail for no reason.
     local -a _ce_doomed=($_ce_dir/${~_ce_pat}(N.))
     _ce_doomed=(${_ce_doomed:#*.tmp})
+    #? Report entries, not files: each cache file has a .zwc beside it, so a raw
+    #? file count says "cleared 4" for what the user thinks of as two integrations.
+    local -a _ce_entries=(${_ce_doomed:#*.zwc*})
     (( $#_ce_doomed )) && rm -f -- $_ce_doomed
-    print -- "cached-eval: cleared ${#_ce_doomed} cached file(s)"
+    print -- "cached-eval: cleared ${#_ce_entries} cached file(s)"
     return 0
   fi
 
   if [[ ${1-} == --list ]]; then
-    #? Same reason as --clear: a stale `.tmp` is not a cache entry.
+    #? Same reason as --clear: a stale `.tmp` is not a cache entry, and neither is
+    #? the `.zwc` compiled alongside one.
     local _ce_f
     for _ce_f in $_ce_dir/*(N.om); do
-      [[ ${_ce_f:t} == *.tmp ]] && continue
+      [[ ${_ce_f:t} == (*.tmp|*.zwc*) ]] && continue
       print -r -- ${_ce_f:t}
     done
     return 0
@@ -63,7 +72,7 @@ _cached_eval_main() {
     return 2
   fi
 
-  #? Silent, like every rc.d/<tool>.zsh guard — a missing tool is not an error.
+  #? Silent, like every conf.d/<tool>.zsh guard — a missing tool is not an error.
   #? $commands only holds bare names, so a path-ish argument is checked with -x.
   local _ce_bin
   if [[ $1 == */* ]]; then
@@ -103,7 +112,15 @@ _cached_eval_main() {
     #? Source what we just generated before installing it, so a failed `mv`
     #? still leaves this shell working.
     source $_ce_tmp
-    mv -f -- $_ce_tmp $_ce_cache 2>/dev/null || rm -f -- $_ce_tmp
+    if mv -f -- $_ce_tmp $_ce_cache 2>/dev/null; then
+      #* Byte-compile it for the NEXT shell: `source <file>` transparently reads
+      #* <file>.zwc when one exists and isn't older, which skips the parse. Done
+      #* synchronously because this branch already paid for a fork of the tool and
+      #* only runs on a rebuild (tool upgrade, or once per $ZSH_CACHED_EVAL_TTL).
+      autoload -Uz zrecompile && zrecompile -pq -- $_ce_cache 2>/dev/null
+    else
+      rm -f -- $_ce_tmp
+    fi
     return 0
   fi
 

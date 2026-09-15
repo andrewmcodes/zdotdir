@@ -1,17 +1,22 @@
 #!/bin/zsh
-# funcs: List your own shell commands with a one-line description, hiding private
-#        helpers and plugin/zsh-internal functions you're not meant to call.
-#
-# Usage:
-#   funcs            # grouped, described listing (when output is a terminal)
-#   funcs pg         # only entries whose name matches *pg*
-#   funcs | fzf      # bare names, one per line, when piped (handy for scripts)
+##? funcs - List your own shell commands with a one-line description, hiding private
+##? helpers and the plugin/zsh-internal functions you're not meant to call.
+##?
+##? Usage:
+##?   funcs            # grouped, described listing (when output is a terminal)
+##?   funcs pg         # only entries whose name matches *pg*
+##?   funcs | fzf      # bare names, one per line, when piped (handy for scripts)
 #
 # What counts as "yours":
 #   - every file in $ZFUNCDIR  (zsh autoloads one function per file), and
-#   - every `function name`/`name()` defined in $ZDOTDIR/rc.d/*.zsh
+#   - every `function name`/`name()` defined in $ZDOTDIR/conf.d/*.zsh
 #   Nested helpers (e.g. an inner `main`) and plugin/tool functions never live in
 #   those files, so they're excluded for free. Names starting with `_` are skipped.
+#
+# Where the description comes from:
+#   A `##?` docstring line (this config's convention, borrowed from mattmc3/zman)
+#   wins. Failing that, the first ordinary comment line of the leading block is
+#   used, so a function that predates the convention still lists with a description.
 
 emulate -L zsh
 #? `emulate -L zsh` already implies local_options, so it isn't repeated here.
@@ -23,48 +28,63 @@ local filter=${1:-}
 
 typeset -A desc cat
 typeset -a names
-local f rc name line clean d
+local f rc name line clean d doc block docblock
 local -i seen prevcomment
-local block
 
 # --- 1. Autoloaded functions: one file == one public function ----------------
 for f in $zfuncdir/*(.N); do
   name=${f:t}
   [[ $name == _* ]] && continue
+  [[ $name == *.zwc(|.old) ]] && continue
   [[ -n $filter && $name != *$filter* ]] && continue
   names+=$name
   cat[$name]='functions/'
-  # The description is the first meaningful comment line in the file.
   d=''
+  doc=''
   seen=0
+  #? Scan the leading comment block only: a `##?` line anywhere in it wins, and
+  #? the first ordinary comment line is kept as the fallback.
   while IFS= read -r line; do
-    (( ++seen > 10 )) && break
+    (( ++seen > 15 )) && break
     [[ $line == '#!'* ]] && continue              # shebang
     [[ -z ${line//[[:space:]]/} ]] && continue    # blank line
-    if [[ $line == \#* ]]; then                   # first real line is a comment
-      clean=${line##\#}
-      clean=${clean##[[:space:]]#[*?!-]#[[:space:]]#}
-      clean=${clean%%[[:space:]]#}
-      clean=${clean#${name}: }
-      clean=${clean#${name}:}
-      d=$clean
+    [[ $line == [[:space:]]#\#* ]] || break       # first line of real code
+    #* `(\#)##` is "one or more literal #" — the escape is required because a bare
+    #* `#` after a pattern is EXTENDED_GLOB's repetition operator.
+    clean=${${line##[[:space:]]#}##(\#)##}
+    clean=${clean##[[:space:]]#[*?!-]#[[:space:]]#}
+    clean=${clean%%[[:space:]]#}
+    clean=${clean#${name}: }
+    clean=${clean#${name}:}
+    clean=${clean#${name} - }
+    if [[ $line == [[:space:]]#\#\#\?* ]]; then
+      [[ -z $clean ]] && continue
+      doc=$clean
+      break
     fi
-    break                                          # stop at the first non-shebang line
+    [[ -n $d ]] || d=$clean
   done < $f
-  desc[$name]=$d
+  desc[$name]=${doc:-$d}
 done
 
-# --- 2. Functions defined inline in rc.d/*.zsh -------------------------------
-for rc in $zdotdir/rc.d/*.zsh(.N); do
+# --- 2. Functions defined inline in conf.d/*.zsh -----------------------------
+for rc in $zdotdir/conf.d/*.zsh(.N); do
   block=''
+  docblock=''
   prevcomment=0
   while IFS= read -r line; do
     if [[ $line == [[:space:]]#\#* ]]; then        # comment line
-      clean=${line##[[:space:]]#\#}
+      clean=${${line##[[:space:]]#}##(\#)##}
       clean=${clean##[[:space:]]#[*?!-]#[[:space:]]#}
       clean=${clean%%[[:space:]]#}
-      (( prevcomment )) || block=''                # a new comment block begins
+      if (( ! prevcomment )); then                 # a new comment block begins
+        block=''
+        docblock=''
+      fi
       [[ -z $block && -n $clean ]] && block=$clean # keep the block's first real line
+      if [[ -z $docblock && -n $clean && $line == [[:space:]]#\#\#\?* ]]; then
+        docblock=$clean
+      fi
       prevcomment=1
       continue
     fi
@@ -77,11 +97,18 @@ for rc in $zdotdir/rc.d/*.zsh(.N); do
     if [[ -n $name && $name != _* && -z ${cat[$name]} ]]; then
       if [[ -z $filter || $name == *$filter* ]]; then
         names+=$name
-        cat[$name]="rc.d/${rc:t}"
-        desc[$name]=$block
+        cat[$name]="conf.d/${rc:t}"
+        #? The name prefix can only be stripped here: a comment block is read
+        #? before the function line that names it.
+        clean=${docblock:-$block}
+        clean=${clean#${name}: }
+        clean=${clean#${name}:}
+        clean=${clean#${name} - }
+        desc[$name]=$clean
       fi
     fi
     block=''
+    docblock=''
     prevcomment=0
   done < $rc
 done
@@ -104,7 +131,7 @@ local c_head=$'\e[1m' c_name=$'\e[36m' c_dim=$'\e[2m' c_rst=$'\e[0m'
 local -i w=0
 for name in $names; do (( ${#name} > w )) && w=${#name}; done
 
-# Group order: autoloaded functions first, then each rc.d file alphabetically.
+# Group order: autoloaded functions first, then each conf.d file alphabetically.
 typeset -a cats ordered
 local c
 for name in $names; do cats+=${cat[$name]}; done

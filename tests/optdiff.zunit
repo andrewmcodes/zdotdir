@@ -6,7 +6,7 @@
 # which sets a known handful of options and points $ZDOTDIR at the fixture —
 # making both sides of optdiff's subtraction deterministic:
 #
-#   autocd, nobeep, nonomatch  - set by the fixture's rc.d files
+#   autocd, nobeep, nonomatch  - set by the fixture's conf.d files
 #   histverify, promptsubst    - set by nobody, i.e. the "plugin" case
 #
 #* zunit runs each test body in its own function, so a helper defined at the top
